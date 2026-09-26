@@ -16,10 +16,10 @@ const base = `http://127.0.0.1:${port}`;
 
 const config: AppConfig = {
   players: [
-    { id: "ali", name: "Ali" },
-    { id: "bo", name: "Bo" },
-    { id: "cem", name: "Cem" },
-    { id: "dana", name: "Dana" },
+    { id: "beny", name: "beny" },
+    { id: "mani", name: "mani" },
+    { id: "rasam", name: "rasam" },
+    { id: "ali", name: "ali" },
   ],
   minRaise: 5,
   maxBet: 100,
@@ -95,62 +95,62 @@ async function seed(): Promise<{ fridayId: string; liveMatchId: string; doneMatc
 
   const friday = await request<Session>("POST", "/api/sessions", {
     name: "Friday poker",
-    playerIds: ["ali", "bo", "cem", "dana"],
+    playerIds: ["beny", "mani", "rasam", "ali"],
   });
   const done = await playMatch(
     friday.id,
-    ["ali", "bo", "cem"],
+    ["beny", "mani", "rasam"],
     [
-      { playerId: "ali", actionType: "raise", amount: 10 },
-      { playerId: "bo", actionType: "call" },
-      { playerId: "cem", actionType: "call" },
-      { playerId: "ali", actionType: "check" },
-      { playerId: "bo", actionType: "check" },
-      { playerId: "cem", actionType: "check" },
-      { playerId: "ali", actionType: "raise", amount: 20 },
-      { playerId: "bo", actionType: "call" },
-      { playerId: "cem", actionType: "fold" },
+      { playerId: "beny", actionType: "raise", amount: 10 },
+      { playerId: "mani", actionType: "call" },
+      { playerId: "rasam", actionType: "call" },
+      { playerId: "beny", actionType: "check" },
+      { playerId: "mani", actionType: "check" },
+      { playerId: "rasam", actionType: "check" },
+      { playerId: "beny", actionType: "raise", amount: 20 },
+      { playerId: "mani", actionType: "call" },
+      { playerId: "rasam", actionType: "fold" },
     ],
-    ["ali"],
+    ["beny"],
   );
   const live = await playMatch(
     friday.id,
-    ["ali", "bo", "cem", "dana"],
+    ["beny", "mani", "rasam", "ali"],
     [
-      { playerId: "ali", actionType: "raise", amount: 10 },
-      { playerId: "bo", actionType: "call" },
-      { playerId: "cem", actionType: "fold" },
-      { playerId: "dana", actionType: "call" },
+      { playerId: "beny", actionType: "raise", amount: 10 },
+      { playerId: "mani", actionType: "call" },
+      { playerId: "rasam", actionType: "fold" },
+      { playerId: "ali", actionType: "call" },
+      { playerId: "beny", actionType: "check" },
+      { playerId: "mani", actionType: "check" },
       { playerId: "ali", actionType: "check" },
-      { playerId: "bo", actionType: "check" },
-      { playerId: "dana", actionType: "check" },
-      { playerId: "ali", actionType: "raise", amount: 20 },
-      { playerId: "bo", actionType: "call" },
-      { playerId: "dana", actionType: "fold" },
-      { playerId: "ali", actionType: "raise", amount: 15 },
+      { playerId: "beny", actionType: "raise", amount: 20 },
+      { playerId: "mani", actionType: "call" },
+      { playerId: "ali", actionType: "fold" },
+      { playerId: "beny", actionType: "raise", amount: 15 },
     ],
   );
 
   const sunday = await request<Session>("POST", "/api/sessions", {
     name: "Sunday cash game",
-    playerIds: ["ali", "bo", "cem", "dana"],
+    playerIds: ["beny", "mani", "rasam", "ali"],
   });
   await playMatch(
     sunday.id,
-    ["ali", "bo", "cem", "dana"],
+    ["beny", "mani", "rasam", "ali"],
     [
-      { playerId: "ali", actionType: "raise", amount: 10 },
-      { playerId: "bo", actionType: "call" },
-      { playerId: "cem", actionType: "fold" },
-      { playerId: "dana", actionType: "call" },
+      { playerId: "beny", actionType: "raise", amount: 10 },
+      { playerId: "mani", actionType: "call" },
+      { playerId: "rasam", actionType: "fold" },
+      { playerId: "ali", actionType: "call" },
+      { playerId: "beny", actionType: "check" },
+      { playerId: "mani", actionType: "check" },
       { playerId: "ali", actionType: "check" },
-      { playerId: "bo", actionType: "check" },
-      { playerId: "dana", actionType: "check" },
-      { playerId: "ali", actionType: "raise", amount: 15 },
-      { playerId: "bo", actionType: "fold" },
-      { playerId: "dana", actionType: "call" },
+      { playerId: "beny", actionType: "raise", amount: 15 },
+      { playerId: "mani", actionType: "fold" },
+      { playerId: "ali", actionType: "call" },
     ],
-    ["dana"],
+    ["ali"],
   );
 
   return { fridayId: friday.id, liveMatchId: live.matchId, doneMatchId: done.matchId };
