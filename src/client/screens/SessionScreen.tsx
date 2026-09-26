@@ -81,19 +81,23 @@ export function SessionScreen() {
             </Card>
           ) : (
             matches.map((match) => {
-              let summary = "In progress";
               let pot = 0;
+              let line = "In progress";
               try {
                 const derived = config ? deriveMatch(match, config) : null;
                 pot = derived?.pot ?? 0;
-                if (match.status === "done") {
-                  const winners = match.winners
-                    .map((id) => playerName(id, session, config))
-                    .join(", ");
-                  summary = winners ? `Won by ${winners}` : "Finished";
+                if (derived && match.status === "done") {
+                  line = match.participants
+                    .map((p) => {
+                      const net = (derived.payouts[p.id] ?? 0) - (derived.contributions[p.id] ?? 0);
+                      return `${p.name} ${net > 0 ? "+" : ""}${net}`;
+                    })
+                    .join(" · ");
+                } else if (derived) {
+                  line = `In progress · pot ${pot}`;
                 }
               } catch {
-                summary = "Unreadable match";
+                line = "Unreadable match";
               }
               return (
                 <Card
@@ -108,11 +112,12 @@ export function SessionScreen() {
                       {match.status === "done" ? "finished" : "live"}
                     </Pill>
                   </div>
-                  <p className="muted">{summary}</p>
-                  <p className="muted">
-                    Pot {pot}
-                    {currency ? ` ${currency}` : ""}
-                  </p>
+                  <p className="history-card__line">{line}</p>
+                  {match.status === "done" && match.winners.length > 0 ? (
+                    <p className="muted">
+                      Won by {match.winners.map((id) => playerName(id, session, config)).join(", ")}
+                    </p>
+                  ) : null}
                 </Card>
               );
             })

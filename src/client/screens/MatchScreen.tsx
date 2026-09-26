@@ -10,6 +10,7 @@ import {
   deriveMatch,
 } from "../../domain";
 import { ActionSheet } from "../components/ActionSheet";
+import { RoundsHistory } from "../components/RoundsHistory";
 import { StartMatchSheet } from "../components/StartMatchSheet";
 import { WinnersSheet } from "../components/WinnersSheet";
 import { Button, Card, Center, Pill, Screen, StatRow, TopBar } from "../components/ui";
@@ -20,6 +21,7 @@ import { useSession } from "../state/useSession";
 type SheetState =
   | { kind: "start" }
   | { kind: "winners" }
+  | { kind: "history" }
   | { kind: "record"; player: PlayerSnapshot; roundIndex: number }
   | { kind: "edit"; player: PlayerSnapshot; action: DerivedAction; roundIndex: number }
   | null;
@@ -118,6 +120,14 @@ export function MatchScreen() {
     return { high };
   };
 
+  const openEdit = (action: DerivedAction) => {
+    if (session.status === "ended") return;
+    const player = match?.participants.find((p) => p.id === action.playerId);
+    if (!player) return;
+    const containing = derived?.rounds.find((r) => r.actions.some((a) => a.id === action.id));
+    setSheet({ kind: "edit", player, action, roundIndex: containing?.index ?? 0 });
+  };
+
   const openPlayer = (player: PlayerSnapshot) => {
     if (done) return;
     const folded = derived.folded.includes(player.id);
@@ -133,15 +143,7 @@ export function MatchScreen() {
         .flatMap((r) => r.actions)
         .filter((a) => a.playerId === player.id)
         .pop();
-    if (latest) {
-      const containing = derived.rounds.find((r) => r.actions.some((a) => a.id === latest.id));
-      setSheet({
-        kind: "edit",
-        player,
-        action: latest,
-        roundIndex: containing?.index ?? 0,
-      });
-    }
+    if (latest) openEdit(latest);
   };
 
   if (done) {
@@ -179,6 +181,13 @@ export function MatchScreen() {
               ))}
             </div>
           </Card>
+          <span className="label">Rounds</span>
+          <RoundsHistory
+            derived={derived}
+            currency={currency}
+            nameOf={(id) => playerName(id, session, config)}
+            onEdit={session.status === "ended" ? undefined : openEdit}
+          />
         </div>
         <Button
           variant="primary"
@@ -198,7 +207,19 @@ export function MatchScreen() {
         <TopBar
           title={`${match.participants.length}-player match`}
           onBack={() => navigate(`/sessions/${session.id}`)}
-          action={<Pill status="active">live</Pill>}
+          action={
+            <>
+              <Pill status="active">live</Pill>
+              <button
+                type="button"
+                className="icon-btn"
+                aria-label="Round history"
+                onClick={() => setSheet({ kind: "history" })}
+              >
+                ☰
+              </button>
+            </>
+          }
         />
         <div className="screen__body screen__body--fixed">
           <Card>
@@ -335,6 +356,33 @@ export function MatchScreen() {
             setSheet(null);
           }}
         />
+      ) : null}
+
+      {sheet?.kind === "history" ? (
+        <div className="sheet">
+          <div className="sheet__panel">
+            <div className="row">
+              <h2 className="title-lg">Round history</h2>
+              <div className="spacer" />
+              <button
+                type="button"
+                className="icon-btn"
+                aria-label="Close history"
+                onClick={() => setSheet(null)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="screen__body">
+              <RoundsHistory
+                derived={derived}
+                currency={currency}
+                nameOf={(id) => playerName(id, session, config)}
+                onEdit={(action) => openEdit(action)}
+              />
+            </div>
+          </div>
+        </div>
       ) : null}
     </>
   );

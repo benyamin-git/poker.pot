@@ -331,6 +331,25 @@ textarea {
   color: var(--danger);
 }
 
+.history-action {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  width: 100%;
+  padding: 6px 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.history-action:disabled {
+  cursor: default;
+}
+
+.history-action:active:not(:disabled) {
+  opacity: 0.7;
+}
+
 .divider {
   height: 1px;
   background: var(--hairline);
