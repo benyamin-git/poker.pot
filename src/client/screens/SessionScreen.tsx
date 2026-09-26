@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { type Command, deriveMatch, sessionBalances } from "../../domain";
 import { api } from "../api";
+import { RosterSheet } from "../components/RosterSheet";
 import { ConfirmDialog, TypedConfirmDialog } from "../components/dialogs";
 import { Button, Card, Center, Pill, Screen, StatRow, TopBar } from "../components/ui";
 import { playerName } from "../format";
@@ -16,6 +17,7 @@ export function SessionScreen() {
   const { config } = useConfig();
   const { session, loading, error, send } = useSession(sessionId);
   const [dialog, setDialog] = useState<DialogKind>(null);
+  const [rosterOpen, setRosterOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const balances = useMemo(
@@ -37,6 +39,7 @@ export function SessionScreen() {
   const currency = config?.currencyLabel;
   const roster = session.players;
   const running = session.status === "active";
+  const hasActiveMatch = session.matches.some((m) => m.status === "active");
   const matches = [...session.matches].reverse();
 
   const act = async (command: Command) => {
@@ -61,7 +64,18 @@ export function SessionScreen() {
           {error ? <p className="negative">{error}</p> : null}
 
           <Card>
-            <span className="label">Standings</span>
+            <div className="row">
+              <span className="label">Standings</span>
+              <div className="spacer" />
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={busy || hasActiveMatch || session.status === "ended"}
+                onClick={() => setRosterOpen(true)}
+              >
+                Edit players
+              </Button>
+            </div>
             <div className="stack">
               {roster.map((player) => (
                 <StatRow
@@ -200,6 +214,18 @@ export function SessionScreen() {
             } finally {
               setBusy(false);
             }
+          }}
+        />
+      ) : null}
+
+      {rosterOpen ? (
+        <RosterSheet
+          session={session}
+          players={config?.players ?? []}
+          onClose={() => setRosterOpen(false)}
+          onSave={async (playerIds) => {
+            await act({ type: "setRoster", playerIds });
+            setRosterOpen(false);
           }}
         />
       ) : null}
