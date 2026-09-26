@@ -95,18 +95,25 @@ currencyLabel: chips   # optional
 Removing a player from the config only affects future match pickers — past
 matches keep their own participant snapshot.
 
-## Rules the ledger enforces
+## Betting rules
+
+> **Warning:** this app is **not** built for any standard poker betting rules.
+> It implements a custom house ruleset used by me and my friends — no blinds,
+> no fixed turn order, no hand ranking, and winners are picked by hand. If you
+> want a more standard version, you are encouraged to fork and build one; the
+> [LICENSE](LICENSE) is "do whatever you want".
+
+The full ruleset lives in [rules.md](rules.md). In short:
 
 - Every session starts at zero. Balances can go negative; it is a ledger, not a
   stack of physical chips.
-- Preflop: fold, call, or raise; you cannot check, so the first player must
-  open with at least the minimum raise.
+- Preflop: fold or raise; you cannot check, so the first player must open with
+  at least the minimum raise. Calls are allowed once there is a bet.
 - Later rounds: check when there is no bet, otherwise fold, call (match the
   round's highest bet) or raise (beat it by at least the minimum raise).
 - A round closes when every player still in has matched the round's highest bet
   (or everyone has checked when there is no bet). A raise reopens the action
-  for anyone who already acted and is now behind, so bets are equal at the end
-  of a round.
+  for anyone who already acted and is now behind.
 - `maxBet` is cumulative across the whole match. Hitting it is all-in; that
   player sits out further rounds but can still win.
 - Folding is final for the match. Folding when you are the last player in is
