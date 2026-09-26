@@ -9,6 +9,7 @@ import {
   applyCommand,
   createSession,
   deriveMatch,
+  isRoundComplete,
   sessionBalances,
 } from "../src/domain";
 import { mulberry32 } from "../src/domain/rng";
@@ -72,7 +73,7 @@ describe("match derivation", () => {
     expect(derived.rounds).toHaveLength(0);
   });
 
-  it("forbids checking or calling preflop", () => {
+  it("forbids checking preflop and calling with nothing to call", () => {
     const s = startMatch(freshSession(["a", "b"]), ["a", "b"]);
     expectCode(
       () =>
@@ -92,7 +93,7 @@ describe("match derivation", () => {
           playerId: "a",
           actionType: "call",
         }),
-      "action-not-allowed",
+      "invalid-call",
     );
   });
 
@@ -146,6 +147,7 @@ describe("match derivation", () => {
       actionType: "raise",
       amount: 10,
     });
+    s = run(s, { type: "recordAction", matchId: id, playerId: "a", actionType: "call" });
     s = run(s, { type: "recordAction", matchId: id, playerId: "a", actionType: "check" });
     s = run(s, { type: "recordAction", matchId: id, playerId: "b", actionType: "check" });
     s = run(s, {
@@ -160,7 +162,36 @@ describe("match derivation", () => {
     expect(derived.rounds).toHaveLength(3);
     const round3 = derived.rounds[2];
     expect(round3?.actions.find((a) => a.playerId === "b")?.added).toBe(20);
-    expect(derived.pot).toBe(15 + 0 + 0 + 20 + 20);
+    expect(derived.pot).toBe(10 + 10 + 0 + 0 + 20 + 20);
+  });
+
+  it("reopens the action after a raise until everyone has matched", () => {
+    let s = startMatch(freshSession(["a", "b", "c"]), ["a", "b", "c"]);
+    const id = lastMatch(s).id;
+    s = run(s, {
+      type: "recordAction",
+      matchId: id,
+      playerId: "a",
+      actionType: "raise",
+      amount: 10,
+    });
+    s = run(s, { type: "recordAction", matchId: id, playerId: "b", actionType: "call" });
+    s = run(s, {
+      type: "recordAction",
+      matchId: id,
+      playerId: "c",
+      actionType: "raise",
+      amount: 20,
+    });
+    // c raised, so a and b are behind again and the round must stay open.
+    expect(isRoundComplete(deriveMatch(lastMatch(s), config))).toBe(false);
+    s = run(s, { type: "recordAction", matchId: id, playerId: "a", actionType: "call" });
+    expect(isRoundComplete(deriveMatch(lastMatch(s), config))).toBe(false);
+    s = run(s, { type: "recordAction", matchId: id, playerId: "b", actionType: "call" });
+    const derived = deriveMatch(lastMatch(s), config);
+    expect(isRoundComplete(derived)).toBe(true);
+    expect(derived.rounds).toHaveLength(1);
+    expect(derived.contributions).toEqual({ a: 20, b: 20, c: 20 });
   });
 
   it("clamps bets at the cumulative max bet (all-in)", () => {
@@ -221,7 +252,7 @@ describe("match derivation", () => {
 
 describe("winners and ledger", () => {
   function playedMatch(): Session {
-    let s = startMatch(freshSession(["a", "b"]), ["a", "b"]);
+    let s = startMatch(freshSession(["a", "b", "c"]), ["a", "b", "c"]);
     const id = lastMatch(s).id;
     s = run(s, {
       type: "recordAction",
@@ -230,15 +261,8 @@ describe("winners and ledger", () => {
       actionType: "raise",
       amount: 5,
     });
-    s = run(s, {
-      type: "recordAction",
-      matchId: id,
-      playerId: "b",
-      actionType: "raise",
-      amount: 10,
-    });
-    s = run(s, { type: "recordAction", matchId: id, playerId: "a", actionType: "check" });
-    s = run(s, { type: "recordAction", matchId: id, playerId: "b", actionType: "check" });
+    s = run(s, { type: "recordAction", matchId: id, playerId: "b", actionType: "call" });
+    s = run(s, { type: "recordAction", matchId: id, playerId: "c", actionType: "call" });
     return s;
   }
 
@@ -300,15 +324,7 @@ describe("history editing and session rules", () => {
       actionType: "raise",
       amount: 10,
     });
-    s = run(s, {
-      type: "recordAction",
-      matchId: id,
-      playerId: "b",
-      actionType: "raise",
-      amount: 15,
-    });
-    s = run(s, { type: "recordAction", matchId: id, playerId: "a", actionType: "check" });
-    s = run(s, { type: "recordAction", matchId: id, playerId: "b", actionType: "check" });
+    s = run(s, { type: "recordAction", matchId: id, playerId: "b", actionType: "call" });
     s = run(s, {
       type: "recordAction",
       matchId: id,

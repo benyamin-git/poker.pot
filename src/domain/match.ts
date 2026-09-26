@@ -50,7 +50,6 @@ export function deriveMatch(match: Match, config: AppConfig): DerivedMatch {
   for (const round of match.rounds) {
     let roundHigh = 0;
     const roundTotals: Record<PlayerId, number> = {};
-    const acted = new Set<PlayerId>();
     const derivedActions: DerivedAction[] = [];
 
     for (const action of round.actions) {
@@ -63,13 +62,6 @@ export function deriveMatch(match: Match, config: AppConfig): DerivedMatch {
       if (allIn.has(action.playerId)) {
         throw new DomainError("already-all-in", `player already all-in: ${action.playerId}`);
       }
-      if (acted.has(action.playerId)) {
-        throw new DomainError(
-          "already-acted",
-          `player already acted this round: ${action.playerId}`,
-        );
-      }
-      acted.add(action.playerId);
 
       const currentRound = roundTotals[action.playerId] ?? 0;
       const matchTotal = contributions[action.playerId] ?? 0;
@@ -105,11 +97,8 @@ export function deriveMatch(match: Match, config: AppConfig): DerivedMatch {
           if (action.amount !== 0) {
             throw new DomainError("invalid-amount", "call must not carry an amount");
           }
-          if (round.index === 0) {
-            throw new DomainError("action-not-allowed", "preflop: fold or raise, no calling");
-          }
           if (roundHigh === 0) {
-            throw new DomainError("invalid-call", "nothing to call; use check");
+            throw new DomainError("invalid-call", "nothing to call");
           }
           const desired = roundHigh - currentRound;
           if (desired <= 0) {
@@ -202,11 +191,23 @@ export function deriveMatch(match: Match, config: AppConfig): DerivedMatch {
   };
 }
 
+/**
+ * A round is complete when every active player (not folded, not all-in) has
+ * acted and matched the highest bet of the round. A raise therefore reopens
+ * the action for anyone who already acted but is now behind.
+ */
 export function isRoundComplete(derived: DerivedMatch): boolean {
   const last = derived.rounds[derived.rounds.length - 1];
   if (!last) return false;
-  const acted = new Set(last.actions.map((a) => a.playerId));
-  return derived.active.every((id) => acted.has(id));
+  const acted = new Set<PlayerId>();
+  const totals: Record<PlayerId, number> = {};
+  let roundHigh = 0;
+  for (const action of last.actions) {
+    acted.add(action.playerId);
+    totals[action.playerId] = action.roundTotal;
+    roundHigh = Math.max(roundHigh, action.roundTotal);
+  }
+  return derived.active.every((id) => acted.has(id) && (totals[id] ?? 0) >= roundHigh);
 }
 
 /** Index the next action should be recorded against. -1 when the match is done. */

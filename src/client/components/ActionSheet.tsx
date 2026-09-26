@@ -47,7 +47,11 @@ export function ActionSheet({
   const minRaiseBy = Math.max(1, minRaiseTo - playerRoundTotal);
   const canRaise = remaining > 0;
 
-  const [type, setType] = useState<ActionType>(initial?.type ?? (preflop ? "raise" : "check"));
+  const [type, setType] = useState<ActionType>(() => {
+    if (initial) return initial.type;
+    if (toCall > 0) return "call";
+    return preflop ? "raise" : "check";
+  });
   const [amount, setAmount] = useState<number>(
     initial?.type === "raise" ? initial.amount : Math.min(minRaiseBy, Math.max(remaining, 1)),
   );
@@ -64,10 +68,16 @@ export function ActionSheet({
     const list: { type: ActionType; label: string }[] = [];
     if (preflop) {
       list.push({ type: "fold", label: "Fold" });
+      if (toCall > 0 && callAmount > 0) {
+        list.push({
+          type: "call",
+          label: callAmount < toCall ? `All in ${callAmount}` : `Call ${callAmount}`,
+        });
+      }
       if (canRaise) list.push({ type: "raise", label: "Raise" });
     } else {
       if (roundHigh === 0) list.push({ type: "check", label: "Check" });
-      if (roundHigh > 0 && toCall > 0) {
+      if (toCall > 0 && callAmount > 0) {
         list.push({
           type: "call",
           label: callAmount < toCall ? `All in ${callAmount}` : `Call ${callAmount}`,
@@ -100,7 +110,7 @@ export function ActionSheet({
 
   return (
     <>
-      <div className="sheet">
+      <div className="sheet sheet--full">
         <div className="sheet__panel">
           <div className="row">
             <span className="label">
@@ -129,7 +139,13 @@ export function ActionSheet({
             <div className="spacer" />
             <div>
               <span className="label">This round</span>
-              <p className="title-lg amount">{type === "raise" ? raiseTotal : playerRoundTotal}</p>
+              <p className="title-lg amount">
+                {type === "raise"
+                  ? raiseTotal
+                  : type === "call"
+                    ? playerRoundTotal + callAmount
+                    : playerRoundTotal}
+              </p>
             </div>
           </div>
 

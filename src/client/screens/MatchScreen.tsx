@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  type Action,
   type ActionType,
   type Command,
   type DerivedAction,
@@ -99,33 +98,41 @@ export function MatchScreen() {
   const index = done ? -1 : currentRoundIndex(derived);
   const currentRound = derived.rounds.find((r) => r.index === index);
   const actedThisRound = new Set((currentRound?.actions ?? []).map((a) => a.playerId));
+  const roundTotals = new Map<string, number>();
+  for (const action of currentRound?.actions ?? []) {
+    roundTotals.set(action.playerId, action.roundTotal);
+  }
   const roundHigh = (currentRound?.actions ?? []).reduce(
     (high, action) => Math.max(high, action.roundTotal),
     0,
   );
 
-  const contextFor = (roundIndex: number, action?: Action) => {
-    const round = derived.rounds.find((r) => r.index === roundIndex);
-    const actions = round?.actions ?? [];
-    const prior = action
-      ? actions.slice(
-          0,
-          Math.max(
-            0,
-            actions.findIndex((a) => a.id === action.id),
-          ),
-        )
-      : actions;
-    const high = prior.reduce((max, a) => Math.max(max, a.roundTotal), 0);
-    return { high };
+  const contextBefore = (target: DerivedAction) => {
+    let high = 0;
+    let roundTotal = 0;
+    let matchTotal = 0;
+    for (const round of derived.rounds) {
+      for (const action of round.actions) {
+        if (action.id === target.id) {
+          return { high, roundTotal, matchTotal, roundIndex: round.index };
+        }
+        if (action.playerId === target.playerId) {
+          roundTotal += action.added;
+          matchTotal += action.added;
+        }
+        high = Math.max(high, action.roundTotal);
+      }
+      high = 0;
+      roundTotal = 0;
+    }
+    return { high: 0, roundTotal: 0, matchTotal: 0, roundIndex: 0 };
   };
 
   const openEdit = (action: DerivedAction) => {
     if (session.status === "ended") return;
     const player = match?.participants.find((p) => p.id === action.playerId);
     if (!player) return;
-    const containing = derived?.rounds.find((r) => r.actions.some((a) => a.id === action.id));
-    setSheet({ kind: "edit", player, action, roundIndex: containing?.index ?? 0 });
+    setSheet({ kind: "edit", player, action, roundIndex: contextBefore(action).roundIndex });
   };
 
   const openPlayer = (player: PlayerSnapshot) => {
@@ -133,12 +140,14 @@ export function MatchScreen() {
     const folded = derived.folded.includes(player.id);
     const allIn = derived.allIn.includes(player.id);
     const acted = actedThisRound.has(player.id);
-    if (!folded && !allIn && !acted) {
+    const roundTotal = roundTotals.get(player.id) ?? 0;
+    const toAct = !folded && !allIn && (!acted || roundTotal < roundHigh);
+    if (toAct) {
       setSheet({ kind: "record", player, roundIndex: index });
       return;
     }
     const latest =
-      (currentRound?.actions ?? []).find((a) => a.playerId === player.id) ??
+      (currentRound?.actions ?? []).filter((a) => a.playerId === player.id).pop() ??
       derived.rounds
         .flatMap((r) => r.actions)
         .filter((a) => a.playerId === player.id)
@@ -201,6 +210,8 @@ export function MatchScreen() {
     );
   }
 
+  const editContext = sheet?.kind === "edit" ? contextBefore(sheet.action) : null;
+
   return (
     <>
       <Screen>
@@ -243,20 +254,28 @@ export function MatchScreen() {
               const folded = derived.folded.includes(player.id);
               const allIn = derived.allIn.includes(player.id);
               const acted = actedThisRound.has(player.id);
-              const action = (currentRound?.actions ?? []).find((a) => a.playerId === player.id);
+              const roundTotal = roundTotals.get(player.id) ?? 0;
+              const remaining = Math.max(
+                0,
+                config.maxBet - (derived.contributions[player.id] ?? 0),
+              );
+              const toCall = Math.min(Math.max(0, roundHigh - roundTotal), remaining);
+              const toAct = !folded && !allIn && (!acted || roundTotal < roundHigh);
               const meta = folded
                 ? "folded"
                 : allIn
                   ? "all-in"
-                  : acted
-                    ? `bet ${action?.roundTotal ?? 0}`
-                    : "to act";
+                  : toAct
+                    ? roundHigh > 0
+                      ? `call ${toCall}`
+                      : "to act"
+                    : `bet ${roundTotal}`;
               return (
                 <button
                   key={player.id}
                   type="button"
                   className="player-btn"
-                  data-done={acted || folded || allIn}
+                  data-done={!toAct}
                   data-folded={folded}
                   data-allin={allIn}
                   onClick={() => openPlayer(player)}
@@ -285,8 +304,8 @@ export function MatchScreen() {
           player={sheet.player}
           roundIndex={sheet.roundIndex}
           roundLabel={roundLabel(sheet.roundIndex)}
-          roundHigh={contextFor(sheet.roundIndex).high}
-          playerRoundTotal={0}
+          roundHigh={roundHigh}
+          playerRoundTotal={roundTotals.get(sheet.player.id) ?? 0}
           playerMatchTotal={derived.contributions[sheet.player.id] ?? 0}
           pot={derived.pot}
           minRaise={config.minRaise}
@@ -311,14 +330,11 @@ export function MatchScreen() {
           mode="edit"
           player={sheet.player}
           initial={sheet.action}
-          roundIndex={sheet.roundIndex}
-          roundLabel={roundLabel(sheet.roundIndex)}
-          roundHigh={contextFor(sheet.roundIndex, sheet.action).high}
-          playerRoundTotal={0}
-          playerMatchTotal={Math.max(
-            0,
-            (derived.contributions[sheet.player.id] ?? 0) - sheet.action.added,
-          )}
+          roundIndex={editContext?.roundIndex ?? sheet.roundIndex}
+          roundLabel={roundLabel(editContext?.roundIndex ?? sheet.roundIndex)}
+          roundHigh={editContext?.high ?? 0}
+          playerRoundTotal={editContext?.roundTotal ?? 0}
+          playerMatchTotal={editContext?.matchTotal ?? 0}
           pot={derived.pot}
           minRaise={config.minRaise}
           maxBet={config.maxBet}

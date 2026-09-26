@@ -68,11 +68,14 @@ matches keep their own participant snapshot.
 
 - Every session starts at zero. Balances can go negative; it is a ledger, not a
   stack of physical chips.
-- Preflop: fold or raise at least the minimum raise. No checking or calling.
+- Preflop: fold, call, or raise; you cannot check, so the first player must
+  open with at least the minimum raise.
 - Later rounds: check when there is no bet, otherwise fold, call (match the
   round's highest bet) or raise (beat it by at least the minimum raise).
-- Each active player acts once per round; the round closes when everyone active
-  has acted.
+- A round closes when every player still in has matched the round's highest bet
+  (or everyone has checked when there is no bet). A raise reopens the action
+  for anyone who already acted and is now behind, so bets are equal at the end
+  of a round.
 - `maxBet` is cumulative across the whole match. Hitting it is all-in; that
   player sits out further rounds but can still win.
 - Folding is final for the match. Folding when you are the last player in is

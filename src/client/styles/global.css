@@ -459,6 +459,19 @@ textarea {
   animation: sheet-up 0.18s ease-out;
 }
 
+.sheet--full {
+  background: var(--bg);
+}
+
+.sheet--full .sheet__panel {
+  flex: 1;
+  max-height: 100dvh;
+  border-radius: 0;
+  padding: calc(env(safe-area-inset-top) + 14px) 16px calc(env(safe-area-inset-bottom) + 16px);
+  box-shadow: none;
+  animation: none;
+}
+
 @keyframes sheet-up {
   from {
     transform: translateY(14px);
