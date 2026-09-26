@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { AppConfig, ConfigPlayer } from "../../domain";
 import { Button, Card, Screen, TopBar } from "../components/ui";
+import { newId } from "../id";
 import { useConfig } from "../state/config";
 
 export function SettingsScreen() {
@@ -12,6 +13,13 @@ export function SettingsScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const seeded = useRef(config !== null);
+
+  useEffect(() => {
+    if (seeded.current || !config) return;
+    seeded.current = true;
+    setDraft(config);
+  }, [config]);
 
   if (!draft) {
     return (
@@ -25,7 +33,7 @@ export function SettingsScreen() {
   const addPlayer = () => {
     const name = newName.trim();
     if (!name) return;
-    const player: ConfigPlayer = { id: crypto.randomUUID(), name };
+    const player: ConfigPlayer = { id: newId(), name };
     setDraft({ ...draft, players: [...draft.players, player] });
     setNewName("");
     setSaved(false);

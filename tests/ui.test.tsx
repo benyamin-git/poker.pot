@@ -1,7 +1,8 @@
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { RoundsHistory } from "../src/client/components/RoundsHistory";
+import { newId } from "../src/client/id";
 import { SessionsScreen } from "../src/client/screens/SessionsScreen";
 import { SetupScreen } from "../src/client/screens/SetupScreen";
 import { ConfigProvider } from "../src/client/state/config";
@@ -15,6 +16,23 @@ const config: AppConfig = {
   minRaise: 5,
   maxBet: 100,
 };
+
+const uuidV4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+describe("client id", () => {
+  it("generates a uuid through crypto.randomUUID when available", () => {
+    expect(newId()).toMatch(uuidV4);
+  });
+
+  it("still generates a uuid when crypto.randomUUID is missing (insecure context)", () => {
+    vi.stubGlobal("crypto", {});
+    try {
+      expect(newId()).toMatch(uuidV4);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
 
 describe("ui smoke", () => {
   it("renders the first-run setup screen", () => {
