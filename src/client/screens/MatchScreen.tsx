@@ -11,6 +11,7 @@ import {
 } from "../../domain";
 import { ActionSheet } from "../components/ActionSheet";
 import { StartMatchSheet } from "../components/StartMatchSheet";
+import { WinnersSheet } from "../components/WinnersSheet";
 import { Button, Card, Center, Pill, Screen, StatRow, TopBar } from "../components/ui";
 import { playerName } from "../format";
 import { useConfig } from "../state/config";
@@ -18,6 +19,7 @@ import { useSession } from "../state/useSession";
 
 type SheetState =
   | { kind: "start" }
+  | { kind: "winners" }
   | { kind: "record"; player: PlayerSnapshot; roundIndex: number }
   | { kind: "edit"; player: PlayerSnapshot; action: DerivedAction; roundIndex: number }
   | null;
@@ -245,6 +247,15 @@ export function MatchScreen() {
             })}
           </div>
         </div>
+
+        <Button
+          variant={derived.active.length === 0 ? "primary" : "tonal"}
+          size="lg"
+          block
+          onClick={() => setSheet({ kind: "winners" })}
+        >
+          {derived.active.length === 0 ? "Everyone is all-in — choose winners" : "Choose winners"}
+        </Button>
       </Screen>
 
       {sheet?.kind === "record" ? (
@@ -308,6 +319,19 @@ export function MatchScreen() {
               matchId: match.id,
               actionId: sheet.action.id,
             });
+            setSheet(null);
+          }}
+        />
+      ) : null}
+
+      {sheet?.kind === "winners" ? (
+        <WinnersSheet
+          participants={match.participants.filter((p) => !derived.folded.includes(p.id))}
+          pot={derived.pot}
+          currency={currency}
+          onCancel={() => setSheet(null)}
+          onSubmit={async (winnerIds) => {
+            await sendCommand({ type: "selectWinners", matchId: match.id, winnerIds });
             setSheet(null);
           }}
         />
