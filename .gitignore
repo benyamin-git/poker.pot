@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+*.log
+.env
+.env.*
+
+# Local machine path to the PRIVATE data directory. Never commit.
+location.yaml
+
+# Defense in depth: if a data dir is ever nested here, keep it out of the public repo.
+data/
+sessions/
+*.local.yaml
+
+.DS_Store
