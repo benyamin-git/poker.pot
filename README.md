@@ -29,6 +29,18 @@ Then open `http://<your-computer-ip>:3001` on the phone.
 Other scripts: `bun run test`, `bun run typecheck`, `bun run lint`,
 `bun run format`.
 
+## Tests
+
+`bun run test` runs the Vitest suite (Node environment, no browser needed):
+
+- `domain` — replay, raises/calls/folds, all-in and winner payouts.
+- `domain-commands` — history edits, session lifecycle and error codes.
+- `domain-invariants` — seeded random valid play asserting the ledger stays
+  zero-sum.
+- `config` — `validateConfig` / `resolvePlayers`.
+- `server` — setup, config and session REST routes over a temp data dir.
+- `client-format` and `ui` — client helpers plus SSR smoke renders.
+
 ## Private data, public repo
 
 This repository is public. **Session data and config live outside it**, in a
@@ -105,7 +117,7 @@ src/domain/    pure ledger engine (sessions, matches, rounds, winners)
 src/server/    Bun HTTP API, atomic YAML storage, setup/config
 src/client/    React + Vite app (MD3-inspired AMOLED theme)
 src/shared/    API types shared by client and server
-tests/         Vitest: domain, server, UI smoke
+tests/         Vitest: domain, commands, invariants, server, client, UI
 ```
 
 Every mutation is validated, applied in memory, then written with a

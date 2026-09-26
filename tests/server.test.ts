@@ -2,7 +2,9 @@ import { mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import { createSession } from "../src/domain";
 import { handleApi } from "../src/server/api";
+import { writeSession } from "../src/server/storage";
 
 let root: string;
 let dataDir: string;
@@ -159,5 +161,106 @@ describe("session lifecycle over HTTP", () => {
     expect(response.status).toBe(200);
     const sessions = await body<{ id: string }[]>(await api("/api/sessions"));
     expect(sessions.some((s) => s.id === sessionId)).toBe(false);
+  });
+});
+
+describe("routing, validation and session reads", () => {
+  let renameId: string;
+
+  it("returns 404 for unknown routes and 405 for unsupported methods", async () => {
+    const notFound = await api("/api/definitely-not-a-route");
+    expect(notFound.status).toBe(404);
+    expect((await body<{ code: string }>(notFound)).code).toBe("not-found");
+
+    const method = await api("/api/sessions", { method: "DELETE" });
+    expect(method.status).toBe(405);
+    expect((await body<{ code: string }>(method)).code).toBe("method-not-allowed");
+  });
+
+  it("rejects an invalid setup body", async () => {
+    const response = await api("/api/setup", { method: "POST", body: JSON.stringify({}) });
+    expect(response.status).toBe(400);
+    expect((await body<{ code: string }>(response)).code).toBe("invalid-config");
+  });
+
+  it("reads the saved config", async () => {
+    const response = await api("/api/config");
+    expect(response.status).toBe(200);
+    const config = await body<{ players: { id: string }[]; minRaise: number }>(response);
+    expect(config.players.map((p) => p.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("gets a session by id and renames it", async () => {
+    const created = await api("/api/sessions", {
+      method: "POST",
+      body: JSON.stringify({ name: "Original", playerIds: ["a", "b"] }),
+    });
+    const session = await body<{ id: string }>(created);
+    renameId = session.id;
+
+    const fetched = await api(`/api/sessions/${renameId}`);
+    expect(fetched.status).toBe(200);
+    expect((await body<{ name: string }>(fetched)).name).toBe("Original");
+
+    const renamed = await api(`/api/sessions/${renameId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name: "Renamed" }),
+    });
+    expect(renamed.status).toBe(200);
+    expect((await body<{ name: string }>(renamed)).name).toBe("Renamed");
+
+    const empty = await api(`/api/sessions/${renameId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name: "   " }),
+    });
+    expect(empty.status).toBe(400);
+    expect((await body<{ code: string }>(empty)).code).toBe("invalid-config");
+  });
+
+  it("rejects unknown and unsafe session ids", async () => {
+    const unknown = await api("/api/sessions/does-not-exist");
+    expect(unknown.status).toBe(400);
+    expect((await body<{ code: string }>(unknown)).code).toBe("unknown-match");
+
+    const unsafe = await api("/api/sessions/bad.id");
+    expect(unsafe.status).toBe(400);
+    expect((await body<{ code: string }>(unsafe)).code).toBe("unknown-match");
+  });
+
+  it("rejects a command without a body", async () => {
+    const response = await api(`/api/sessions/${renameId}/commands`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    expect(response.status).toBe(400);
+    expect((await body<{ code: string }>(response)).code).toBe("invalid-config");
+  });
+
+  it("lists sessions ordered by creation time", async () => {
+    await writeSession(
+      dataDir,
+      createSession("order-early", "Early", [{ id: "a", name: "Ali" }], "2026-01-01T00:00:00.000Z"),
+    );
+    await writeSession(
+      dataDir,
+      createSession("order-late", "Late", [{ id: "a", name: "Ali" }], "2026-06-01T00:00:00.000Z"),
+    );
+    const sessions = await body<{ id: string }[]>(await api("/api/sessions"));
+    const early = sessions.findIndex((s) => s.id === "order-early");
+    const late = sessions.findIndex((s) => s.id === "order-late");
+    expect(early).toBeGreaterThanOrEqual(0);
+    expect(early).toBeLessThan(late);
+  });
+
+  it("reports a domain error when the data directory is not configured", async () => {
+    const previous = process.env.POKER_LOCATION_FILE;
+    process.env.POKER_LOCATION_FILE = path.join(root, "missing-location.yaml");
+    try {
+      const response = await api("/api/config");
+      expect(response.status).toBe(400);
+      expect((await body<{ code: string }>(response)).code).toBe("invalid-config");
+    } finally {
+      process.env.POKER_LOCATION_FILE = previous;
+    }
   });
 });
