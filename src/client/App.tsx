@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { api } from "./api";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Center, Screen } from "./components/ui";
 import { MatchScreen } from "./screens/MatchScreen";
 import { SessionScreen } from "./screens/SessionScreen";
@@ -57,12 +58,14 @@ function ConfiguredApp() {
 export function App() {
   return (
     <div className="app">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/setup" element={<SetupScreen />} />
-          <Route path="*" element={<ConfiguredApp />} />
-        </Routes>
-      </BrowserRouter>
+      <ErrorBoundary>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/setup" element={<SetupScreen />} />
+            <Route path="*" element={<ConfiguredApp />} />
+          </Routes>
+        </BrowserRouter>
+      </ErrorBoundary>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { handleApi } from "../src/server/api";
 
 let root: string;
@@ -142,6 +142,7 @@ describe("session lifecycle over HTTP", () => {
   });
 
   it("quarantines corrupt session files instead of crashing", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const dir = path.join(dataDir, "sessions");
     await writeFile(path.join(dir, "broken.yaml"), "::: not yaml :::", "utf8");
     const response = await api("/api/sessions");
@@ -150,6 +151,7 @@ describe("session lifecycle over HTTP", () => {
     expect(sessions.some((s) => s.id === "broken")).toBe(false);
     const quarantine = await readdir(path.join(dir, ".quarantine"));
     expect(quarantine.some((f) => f.includes("broken.yaml"))).toBe(true);
+    warn.mockRestore();
   });
 
   it("deletes a session", async () => {
