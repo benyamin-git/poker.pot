@@ -106,7 +106,7 @@ export function StatRow({
 }: {
   name: string;
   value: number;
-  currency?: string;
+  currency?: string | undefined;
   signed?: boolean;
 }) {
   const sign = value > 0 ? "pos" : value < 0 ? "neg" : undefined;
