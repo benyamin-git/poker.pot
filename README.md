@@ -10,6 +10,22 @@ ranking — the app keeps a clean betting ledger and the group picks the winners
 - History is fully visible and editable (with confirmations) and recomputes
   standings automatically.
 
+## Screenshots
+
+| Sessions | Live match | Ledger |
+| --- | --- | --- |
+| ![Sessions list](docs/screenshots/sessions.png) | ![Active match](docs/screenshots/match.png) | ![Round history](docs/screenshots/history.png) |
+
+| Session overview | Settings | First-run setup |
+| --- | --- | --- |
+| ![Session overview](docs/screenshots/session.png) | ![Settings](docs/screenshots/settings.png) | ![First-run setup](docs/screenshots/setup.png) |
+
+Regenerate them with `bun run screenshots`. It builds the app, boots a throwaway
+server (never touching your real `location.yaml`), seeds a demo session and
+captures the screens with Playwright. Install the browser once with
+`bunx playwright install chromium` (if the Playwright CDN is blocked, prefix it
+with `PLAYWRIGHT_DOWNLOAD_HOST=https://cdn.npmmirror.com/binaries/playwright`).
+
 ## Quick start
 
 ```bash
@@ -27,7 +43,10 @@ bun start            # serves the built app and API on 0.0.0.0:3001
 Then open `http://<your-computer-ip>:3001` on the phone.
 
 Other scripts: `bun run test`, `bun run typecheck`, `bun run lint`,
-`bun run format`.
+`bun run format`, `bun run screenshots`.
+
+`bin/dev`, `bin/build` and `bin/run` are thin wrappers around the matching
+`bun` commands for convenient shell aliasing.
 
 ## Tests
 
