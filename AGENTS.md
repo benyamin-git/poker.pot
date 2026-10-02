@@ -1,0 +1,43 @@
+# poker.pot — Agent Notes
+
+Phone-viewport pot manager for poker games with friends. A Bun server
+(`src/server/index.ts`) serves the built React UI from `dist/` and the `/api/*`
+routes. Session data lives outside the repo; see `README.md` and `rules.md`.
+
+## Ports and servers
+
+Personal projects use allocated ports in the 7400–7499 range. The pins live in
+`/srv/stacks/dashboard/html/config.yaml`; do not reuse or renumber them.
+
+| Server | Port | Command |
+| --- | --- | --- |
+| Live (UI + API) | `0.0.0.0:7403` | `./scripts/live.sh` (background) or `bun start` |
+| Dev Vite | `0.0.0.0:7404` | `bun run dev` (proxies `/api` to `http://localhost:7403`) |
+
+The live port defaults to `7403` in `src/server/index.ts` and is overridable
+with `PORT` (e.g. `PORT=7499 bun start`). The background script accepts
+`LIVE_SERVER_PORT` instead.
+
+`scripts/live.sh` logs to `/tmp/poker.pot-liveserver.log`, writes a pid to
+`/tmp/poker.pot-liveserver.pid`, and refuses to start if the port is bound.
+Stop it with `kill $(cat /tmp/poker.pot-liveserver.pid)`.
+
+## Commands
+
+```bash
+bun run dev        # API + Vite dev servers
+bun run build      # vite build -> dist/
+bun start          # serve dist/ + API on 0.0.0.0:7403
+./scripts/live.sh  # detached live server, builds dist/ if missing
+bun run test
+bun run typecheck
+bun run lint
+```
+
+## Hard rules
+
+- Do not commit unless asked.
+- Do not add code comments unless asked.
+- Never hand-edit generated files; `dist/` is built by `bun run build`.
+- Keep the live server on its allocated port; bind `0.0.0.0` with a strict
+  port so the dashboard link works from phones on the LAN.

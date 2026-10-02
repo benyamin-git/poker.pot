@@ -2,7 +2,7 @@ import path from "node:path";
 import { DomainError } from "../domain";
 import { handleApi, json } from "./api";
 
-const PORT = Number(process.env.PORT ?? 3001);
+const PORT = Number(process.env.PORT ?? 7403);
 const DIST = path.join(process.cwd(), "dist");
 
 async function serveStatic(url: URL): Promise<Response> {

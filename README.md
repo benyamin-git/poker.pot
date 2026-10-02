@@ -38,8 +38,8 @@ bun install
 bun run dev
 ```
 
-`bun run dev` starts two processes: the Bun API on `0.0.0.0:3001` and the Vite
-dev server on `0.0.0.0:5173`, which proxies `/api` to the API.
+`bun run dev` starts two processes: the Bun API on `0.0.0.0:7403` and the Vite
+dev server on `0.0.0.0:7404` (strict), which proxies `/api` to the API.
 
 To serve the built app and API from one process, for a phone on the same
 network:
@@ -47,11 +47,18 @@ network:
 ```bash
 bun run build
 bun start
+# or, for a detached background server:
+./scripts/live.sh
 ```
 
-`bun start` serves the client and API on `0.0.0.0:3001`. Open
-`http://<computer-ip>:3001` on the phone. The API port comes from `PORT`
-(default `3001`).
+`bun start` serves the client and API on `0.0.0.0:7403`. Open
+`http://<computer-ip>:7403` on the phone. The API port comes from `PORT`
+(default `7403`).
+
+`scripts/live.sh` starts the same server detached (`nohup`), building `dist/`
+first if needed. It logs to `/tmp/poker.pot-liveserver.log`, writes a pid to
+`/tmp/poker.pot-liveserver.pid`, and prints the stop command. Override the port
+with `LIVE_SERVER_PORT`.
 
 Other scripts: `bun run test`, `bun run test:watch`, `bun run typecheck`,
 `bun run lint`, `bun run format`, `bun run screenshots`.
