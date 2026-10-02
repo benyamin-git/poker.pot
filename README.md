@@ -1,14 +1,16 @@
 # poker.pot
 
-A phone-viewport pot manager for poker games with friends. No cards, no hand
-ranking — the app keeps a clean betting ledger and the group picks the winners.
+A phone-viewport pot manager for poker games with friends. It keeps a betting
+ledger; it does not deal cards or rank hands, and the group picks the winners.
 
-- Pass one phone around: each player taps their name and records fold / check /
-  call / raise.
-- Every match and every betting round is written to disk instantly, so a sudden
-  exit or shutdown never loses data.
-- History is fully visible and editable (with confirmations) and recomputes
-  standings automatically.
+One phone is passed around the table. Each player taps their own name and records
+fold / check / call / raise. Every action is written to disk as it happens, so a
+sudden exit or shutdown does not lose the current round. History is visible and
+editable, and standings recompute from it.
+
+> **Not standard poker.** poker.pot runs a custom house ruleset with no blinds,
+> no fixed turn order, and no hand ranking. The full ruleset is in
+> [rules.md](rules.md). The [LICENSE](LICENSE) is "do whatever you want".
 
 ## Screenshots
 
@@ -20,50 +22,51 @@ ranking — the app keeps a clean betting ledger and the group picks the winners
 | --- | --- | --- |
 | ![Session overview](docs/screenshots/session.png) | ![Settings](docs/screenshots/settings.png) | ![First-run setup](docs/screenshots/setup.png) |
 
-Regenerate them with `bun run screenshots`. It builds the app, boots a throwaway
-server (never touching your real `location.yaml`), seeds a demo session and
-captures the screens with Playwright. Install the browser once with
-`bunx playwright install chromium` (if the Playwright CDN is blocked, prefix it
-with `PLAYWRIGHT_DOWNLOAD_HOST=https://cdn.npmmirror.com/binaries/playwright`).
+Regenerate them with `bun run screenshots`. The script builds the app, starts a
+throwaway server on port 4180 with its own temporary data directory (it does not
+touch `location.yaml`), seeds a demo session, and captures the screens with
+Playwright. Install the browser once with `bunx playwright install chromium`. If
+the Playwright CDN is blocked, prefix the install with
+`PLAYWRIGHT_DOWNLOAD_HOST=https://cdn.npmmirror.com/binaries/playwright`.
 
 ## Quick start
 
+Requires [Bun](https://bun.sh).
+
 ```bash
 bun install
-bun run dev          # Vite dev server (http://localhost:5173) + API on :3001
+bun run dev
 ```
 
-For a phone on the same network:
+`bun run dev` starts two processes: the Bun API on `0.0.0.0:3001` and the Vite
+dev server on `0.0.0.0:5173`, which proxies `/api` to the API.
+
+To serve the built app and API from one process, for a phone on the same
+network:
 
 ```bash
 bun run build
-bun start            # serves the built app and API on 0.0.0.0:3001
+bun start
 ```
 
-Then open `http://<your-computer-ip>:3001` on the phone.
+`bun start` serves the client and API on `0.0.0.0:3001`. Open
+`http://<computer-ip>:3001` on the phone. The API port comes from `PORT`
+(default `3001`).
 
-Other scripts: `bun run test`, `bun run typecheck`, `bun run lint`,
-`bun run format`, `bun run screenshots`.
+Other scripts: `bun run test`, `bun run test:watch`, `bun run typecheck`,
+`bun run lint`, `bun run format`, `bun run screenshots`.
 
-`bin/dev`, `bin/build` and `bin/run` are thin wrappers around the matching
-`bun` commands for convenient shell aliasing.
+`bin/dev`, `bin/build` and `bin/run` are wrappers around the matching `bun`
+commands for shell aliasing.
 
-## Tests
+## Data and config
 
-`bun run test` runs the Vitest suite (Node environment, no browser needed):
-
-- `domain` — replay, raises/calls/folds, all-in and winner payouts.
-- `domain-commands` — history edits, session lifecycle and error codes.
-- `domain-invariants` — seeded random valid play asserting the ledger stays
-  zero-sum.
-- `config` — `validateConfig` / `resolvePlayers`.
-- `server` — setup, config and session REST routes over a temp data dir.
-- `client-format` and `ui` — client helpers plus SSR smoke renders.
-
-## Private data, public repo
-
-This repository is public. **Session data and config live outside it**, in a
-private folder you choose:
+Session data lives outside this repository, in a private folder you choose. The
+pointer to that folder is `location.yaml` in this repo, which is **gitignored**;
+a template ships as `location.example.yaml`. You can also set it through the
+first-run setup screen, or point the server elsewhere with the
+`POKER_LOCATION_FILE` environment variable (which selects the location file, not
+the data directory).
 
 ```
 <dataDir>/
@@ -71,81 +74,69 @@ private folder you choose:
   sessions/<id>.yaml   # one file per session, full history
 ```
 
-The pointer to that folder is `location.yaml` in this repo, which is
-**gitignored** (a template ships as `location.example.yaml`). You can also set
-it through the first-run setup screen.
+Keep `<dataDir>` as its own private git repository to back it up. The files are
+human-readable YAML, so diffs are meaningful. Never put the data folder inside
+this repository.
 
-Keep `<dataDir>` as its own **private** git repository to back it up. The files
-are human-readable YAML so diffs are meaningful. Never commit the data folder
-into this public repo.
-
-## Config
-
-`config.yaml`:
+`config.yaml` holds the players and the two betting limits:
 
 ```yaml
 players:
-  - id: 3f0c...        # stable id; history references this, never the name
+  - id: 3f0c...          # stable id; history references this, never the name
     name: Ali
-minRaise: 5            # a raise must beat the round's current bet by this much
-maxBet: 100            # cumulative per match; reaching it is all-in
-currencyLabel: chips   # optional
+minRaise: 5             # a raise must beat the round's current bet by this much
+maxBet: 100             # cumulative per match; reaching it is all-in
+currencyLabel: chips    # optional
 ```
 
-Removing a player from the config only affects future match pickers — past
-matches keep their own participant snapshot.
+Full player ids are generated when players are added through the settings
+screen. Removing a player only affects future match pickers: past matches keep
+their own participant snapshot.
+
+Every mutation is validated, applied in memory, then written with a temp-file
+plus rename under a per-session lock. Unreadable session files are moved to
+`sessions/.quarantine/` instead of breaking the app.
 
 ## Betting rules
 
-> **Warning:** this app is **not** built for any standard poker betting rules.
-> It implements a custom house ruleset used by me and my friends — no blinds,
-> no fixed turn order, no hand ranking, and winners are picked by hand. If you
-> want a more standard version, you are encouraged to fork and build one; the
-> [LICENSE](LICENSE) is "do whatever you want".
-
-The full ruleset lives in [rules.md](rules.md). In short:
+The full ruleset is in [rules.md](rules.md). In short:
 
 - Every session starts at zero. Balances can go negative; it is a ledger, not a
   stack of physical chips.
-- Preflop: fold or raise; you cannot check, so the first player must open with
-  at least the minimum raise. Calls are allowed once there is a bet.
-- Later rounds: check when there is no bet, otherwise fold, call (match the
-  round's highest bet) or raise (beat it by at least the minimum raise).
-- A round closes when every player still in has matched the round's highest bet
-  (or everyone has checked when there is no bet). A raise reopens the action
-  for anyone who already acted and is now behind.
+- Preflop, you can fold or raise but not check, so the first player must open
+  with at least `minRaise`. Calls are allowed once there is a bet.
+- Later rounds, check when there is no bet; otherwise fold, call (match the
+  round's highest bet), or raise (beat it by at least `minRaise`).
+- A raise reopens the action for anyone who already acted and is now behind.
 - `maxBet` is cumulative across the whole match. Hitting it is all-in; that
   player sits out further rounds but can still win.
-- Folding is final for the match. Folding when you are the last player in is
-  blocked. If everyone else folds, the last player wins automatically.
+- Folding is final, and folding as the last active player is blocked. If
+  everyone else folds, the last player wins automatically.
 - Winners are chosen manually from the players who have not folded. The pot is
-  split equally; leftover chips that do not divide evenly are assigned to
-  random winners and the assignment is stored so history never changes.
+  split equally; leftover chips go to random winners, and the assignment is
+  stored so history never changes.
 
-Chip counts are integers. (The original sketch asked for floats; the integer
-remainder rule was chosen instead.)
+Chip counts are integers.
 
-## Session lifecycle
+## Tests
 
-- **Start / create**: pick a subset of the config players.
-- **Pause / resume**: temporary stop.
-- **End**: locks the session permanently (history stays readable).
-- **Remove**: permanent delete, guarded by a GitHub-style typed confirmation.
+`bun run test` runs the Vitest suite (Node environment, no browser):
 
-A session roster can be changed between matches only. Each match snapshots its
-own roster, so players can join some matches and skip others without corrupting
-history. Once a match records its first action, its roster is locked.
+- `domain` — replay, raises/calls/folds, all-in and winner payouts.
+- `domain-commands` — history edits, session lifecycle and error codes.
+- `domain-invariants` — seeded random valid play asserting the ledger stays
+  zero-sum.
+- `config` — `validateConfig` and `resolvePlayers`.
+- `server` — setup, config and session REST routes over a temp data directory.
+- `client-format` and `ui` — client helpers plus SSR smoke renders.
 
 ## Project layout
 
 ```
 src/domain/    pure ledger engine (sessions, matches, rounds, winners)
-src/server/    Bun HTTP API, atomic YAML storage, setup/config
-src/client/    React + Vite app (MD3-inspired AMOLED theme)
+src/server/    Bun HTTP API, atomic YAML storage, setup and config
+src/client/    React + Vite app
 src/shared/    API types shared by client and server
-tests/         Vitest: domain, commands, invariants, server, client, UI
+tests/         Vitest suites
+scripts/       Playwright screenshot generator
 ```
-
-Every mutation is validated, applied in memory, then written with a
-temp-file + rename under a per-session lock. Unreadable session files are moved
-to `sessions/.quarantine/` instead of breaking the app.
