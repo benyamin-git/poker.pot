@@ -9,7 +9,7 @@ PIDFILE="/tmp/poker.pot-liveserver.pid"
 
 cd "$(dirname "$0")/.."
 
-if lsof -i ":$PORT" -sTCP:LISTEN -t >/dev/null 2>&1; then
+if ss -H -ltn "sport = :$PORT" | grep -q .; then
   echo "Port $PORT is already in use. Stop that process or set LIVE_SERVER_PORT." >&2
   exit 1
 fi

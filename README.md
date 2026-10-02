@@ -23,7 +23,7 @@ editable, and standings recompute from it.
 | ![Session overview](docs/screenshots/session.png) | ![Settings](docs/screenshots/settings.png) | ![First-run setup](docs/screenshots/setup.png) |
 
 Regenerate them with `bun run screenshots`. The script builds the app, starts a
-throwaway server on port 4180 with its own temporary data directory (it does not
+throwaway server on port 7405 with its own temporary data directory (it does not
 touch `location.yaml`), seeds a demo session, and captures the screens with
 Playwright. Install the browser once with `bunx playwright install chromium`. If
 the Playwright CDN is blocked, prefix the install with

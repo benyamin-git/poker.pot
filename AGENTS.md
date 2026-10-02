@@ -13,6 +13,12 @@ Personal projects use allocated ports in the 7400–7499 range. The pins live in
 | --- | --- | --- |
 | Live (UI + API) | `0.0.0.0:7403` | `./scripts/live.sh` (background) or `bun start` |
 | Dev Vite | `0.0.0.0:7404` | `bun run dev` (proxies `/api` to `http://localhost:7403`) |
+| Screenshots (transient) | `127.0.0.1:7405` | `bun run screenshots` |
+
+`bun run screenshots` is a transient, local-only helper: it starts a throwaway
+server on `7405`, captures the docs images, then exits. It is not a persistent
+service, so `7405` is not registered in the dashboard config. Override it with
+`SCREENSHOTS_PORT` if needed.
 
 The live port defaults to `7403` in `src/server/index.ts` and is overridable
 with `PORT` (e.g. `PORT=7499 bun start`). The background script accepts

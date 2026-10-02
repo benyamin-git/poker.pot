@@ -11,7 +11,7 @@ const workDir = path.join(root, ".screenshots");
 const dataDir = path.join(workDir, "data");
 const locationFile = path.join(workDir, "location.yaml");
 const outputDir = path.join(root, "docs", "screenshots");
-const port = Number(process.env.SCREENSHOTS_PORT ?? 4180);
+const port = Number(process.env.SCREENSHOTS_PORT ?? 7405);
 const base = `http://127.0.0.1:${port}`;
 
 const config: AppConfig = {
