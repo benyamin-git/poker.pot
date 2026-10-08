@@ -9,4 +9,9 @@ coverage/
 # Local machine path to the PRIVATE data directory. Never commit.
 location.yaml
 
+# Tauri Android build outputs and signing material. Never commit.
+src-tauri/target/
+src-tauri/gen/android/keystore.properties
+release/
+
 .DS_Store

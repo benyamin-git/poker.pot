@@ -1,0 +1,47 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "poker.pot",
+  "version": "../package.json",
+  "identifier": "com.pokerpot.app",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:7404",
+    "beforeDevCommand": "bun run dev",
+    "beforeBuildCommand": "bun run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "poker.pot",
+        "width": 480,
+        "height": 860,
+        "minWidth": 360,
+        "minHeight": 480,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "publisher": "benyamin-git",
+    "copyright": "Copyright (C) 2026 benyamin-git",
+    "category": "Games",
+    "shortDescription": "Phone-friendly pot manager for poker games with friends.",
+    "longDescription": "poker.pot keeps the ledger for your poker nights on the device itself: players, matches and chip balances, with no account and no server. It works offline at the table, on any phone.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "android": {
+      "debugApplicationIdSuffix": ".debug"
+    }
+  }
+}
