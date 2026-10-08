@@ -1,9 +1,69 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { AppConfig, ConfigPlayer } from "../../domain";
+import { IconCheck } from "../components/icons";
 import { Button, Card, Screen, TopBar } from "../components/ui";
 import { newId } from "../id";
 import { useConfig } from "../state/config";
+import { ACCENTS, type Accent, THEMES, type Theme, useAppearance } from "../theme";
+
+const THEME_LABELS: Record<Theme, string> = { light: "Light", dark: "Dark", oled: "OLED" };
+
+const ACCENT_LABELS: Record<Accent, string> = {
+  blue: "Blue",
+  teal: "Teal",
+  green: "Green",
+  orange: "Orange",
+  rose: "Rose",
+  violet: "Violet",
+};
+
+export function AppearanceSettings() {
+  const [appearance, setAppearance] = useAppearance();
+  return (
+    <Card>
+      <span className="label">Appearance</span>
+      <div className="stack">
+        <fieldset className="segmented">
+          <legend className="visually-hidden">Theme</legend>
+          {THEMES.map((theme) => (
+            <label
+              key={theme}
+              className="segmented__option"
+              data-selected={appearance.theme === theme}
+            >
+              <input
+                type="radio"
+                name="theme"
+                value={theme}
+                checked={appearance.theme === theme}
+                onChange={() => setAppearance({ ...appearance, theme })}
+              />
+              {THEME_LABELS[theme]}
+            </label>
+          ))}
+        </fieldset>
+        <fieldset className="swatches">
+          <legend className="visually-hidden">Accent color</legend>
+          {ACCENTS.map((accent) => (
+            <button
+              key={accent}
+              type="button"
+              className="swatch"
+              data-accent={accent}
+              data-selected={appearance.accent === accent}
+              aria-pressed={appearance.accent === accent}
+              aria-label={ACCENT_LABELS[accent]}
+              onClick={() => setAppearance({ ...appearance, accent })}
+            >
+              {appearance.accent === accent ? <IconCheck size={18} /> : null}
+            </button>
+          ))}
+        </fieldset>
+      </div>
+    </Card>
+  );
+}
 
 export function SettingsScreen() {
   const navigate = useNavigate();
@@ -154,6 +214,8 @@ export function SettingsScreen() {
             </label>
           </div>
         </Card>
+
+        <AppearanceSettings />
 
         {error ? <p className="negative">{error}</p> : null}
         {saved ? <p className="positive">Saved.</p> : null}

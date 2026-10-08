@@ -606,3 +606,28 @@
   --warning: #ffdf9e;
   color-scheme: dark;
 }
+
+[data-swatch="blue"] {
+  --swatch-light: #35639c;
+  --swatch-dark: #7daeec;
+}
+[data-swatch="teal"] {
+  --swatch-light: #127070;
+  --swatch-dark: #69bbba;
+}
+[data-swatch="green"] {
+  --swatch-light: #3c703f;
+  --swatch-dark: #4bc957;
+}
+[data-swatch="orange"] {
+  --swatch-light: #924c2b;
+  --swatch-dark: #e29572;
+}
+[data-swatch="rose"] {
+  --swatch-light: #94464e;
+  --swatch-dark: #e58f95;
+}
+[data-swatch="violet"] {
+  --swatch-light: #7638c0;
+  --swatch-dark: #b49ce1;
+}

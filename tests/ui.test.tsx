@@ -5,6 +5,7 @@ import { AppShell } from "../src/client/App";
 import { RoundsHistory } from "../src/client/components/RoundsHistory";
 import { newId } from "../src/client/id";
 import { SessionsScreen } from "../src/client/screens/SessionsScreen";
+import { AppearanceSettings } from "../src/client/screens/SettingsScreen";
 import { SetupScreen } from "../src/client/screens/SetupScreen";
 import { ConfigProvider } from "../src/client/state/config";
 import { type AppConfig, type Match, deriveMatch } from "../src/domain";
@@ -89,6 +90,17 @@ describe("ui smoke", () => {
     );
     expect(html).toContain('aria-label="New session"');
     expect(html).not.toContain("Add players in settings first");
+  });
+
+  it("renders the appearance controls with the active theme and accent selected", () => {
+    const html = renderToString(<AppearanceSettings />);
+    expect(html).toContain("Appearance");
+    expect(html).toContain("<fieldset");
+    expect((html.match(/type="radio"/g) ?? []).length).toBe(3);
+    expect((html.match(/checked=""/g) ?? []).length).toBe(1);
+    expect(html).toContain("Accent color");
+    expect((html.match(/data-accent="/g) ?? []).length).toBe(6);
+    expect((html.match(/data-selected="true"/g) ?? []).length).toBe(2);
   });
 
   it("renders round history text for bets and folds", () => {

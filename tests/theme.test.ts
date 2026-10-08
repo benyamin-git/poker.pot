@@ -82,6 +82,15 @@ describe("token stylesheet", () => {
     expect(committed).toBe(generateTokensCss());
   });
 
+  it("emits a preview color for every accent swatch", () => {
+    const css = generateTokensCss();
+    for (const accent of ACCENTS) {
+      expect(css, accent).toContain(`[data-swatch="${accent}"]`);
+      expect(css, accent).toContain(DOCUMENTED_PRIMARIES[accent].light);
+      expect(css, accent).toContain(DOCUMENTED_PRIMARIES[accent].dark);
+    }
+  });
+
   it("meets the body-text contrast floor in every combination", () => {
     for (const { theme, accent } of COMBINATIONS) {
       const palette = buildPalette(theme, accent);
