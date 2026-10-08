@@ -1,4 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { NavLink } from "react-router-dom";
+import { IconBack, IconClose } from "./icons";
 
 type ButtonVariant = "primary" | "tonal" | "ghost" | "danger";
 type ButtonSize = "sm" | "md" | "lg";
@@ -33,6 +35,53 @@ export function Button({
   );
 }
 
+export function IconButton({
+  label,
+  className,
+  children,
+  ...rest
+}: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
+  const classes = ["icon-btn", className ?? ""].filter(Boolean).join(" ");
+  return (
+    <button type="button" className={classes} aria-label={label} {...rest}>
+      {children}
+    </button>
+  );
+}
+
+export function Fab({
+  label,
+  className,
+  children,
+  ...rest
+}: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
+  const classes = ["fab", className ?? ""].filter(Boolean).join(" ");
+  return (
+    <button type="button" className={classes} aria-label={label} {...rest}>
+      {children}
+    </button>
+  );
+}
+
+export function BottomTabs({
+  items,
+}: {
+  items: { to: string; label: string; icon: ReactNode }[];
+}) {
+  return (
+    <nav className="bottom-tabs" aria-label="Main">
+      {items.map((item) => (
+        <NavLink key={item.to} to={item.to} end className="bottom-tabs__item">
+          <span className="bottom-tabs__icon" aria-hidden="true">
+            {item.icon}
+          </span>
+          <span className="bottom-tabs__label">{item.label}</span>
+        </NavLink>
+      ))}
+    </nav>
+  );
+}
+
 export function Screen({ children }: { children: ReactNode }) {
   return <div className="screen">{children}</div>;
 }
@@ -49,9 +98,9 @@ export function TopBar({
   return (
     <header className="topbar">
       {onBack ? (
-        <button type="button" className="icon-btn" onClick={onBack} aria-label="Back">
-          ‹
-        </button>
+        <IconButton label="Back" onClick={onBack}>
+          <IconBack />
+        </IconButton>
       ) : null}
       <h1 className="topbar__title">{title}</h1>
       {action}
@@ -124,4 +173,30 @@ export function StatRow({
 
 export function Center({ children }: { children: ReactNode }) {
   return <div className="center">{children}</div>;
+}
+
+export function Sheet({
+  title,
+  onClose,
+  full = false,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  full?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className={full ? "sheet sheet--full" : "sheet"}>
+      <dialog open className="sheet__panel" aria-modal="true" aria-label={title}>
+        <header className="sheet__header">
+          <h2 className="title-lg">{title}</h2>
+          <IconButton label="Close" onClick={onClose}>
+            <IconClose />
+          </IconButton>
+        </header>
+        {children}
+      </dialog>
+    </div>
+  );
 }
