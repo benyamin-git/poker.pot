@@ -12,6 +12,7 @@
     "tauri": "tauri",
     "android:init": "tauri android init --ci",
     "android:apk": "tauri android build --apk --ci",
+    "version:set": "bun scripts/version-set.ts",
     "theme": "bun scripts/theme.ts",
     "test": "vitest run",
     "test:watch": "vitest",

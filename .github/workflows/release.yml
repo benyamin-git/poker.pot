@@ -1,0 +1,126 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    name: Checks
+    uses: ./.github/workflows/ci.yml
+
+  android:
+    name: Android (.apk)
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@1.98.1
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Configure Android NDK
+        run: |
+          NDK_HOME="${NDK_HOME:-${ANDROID_NDK_ROOT:-}}"
+          if [ -z "$NDK_HOME" ]; then
+            NDK_HOME="$(ls -d "$ANDROID_HOME"/ndk/* 2>/dev/null | sort -V | tail -1)"
+          fi
+          if [ -z "$NDK_HOME" ]; then
+            echo "No Android NDK found on the runner" >&2
+            exit 1
+          fi
+          echo "NDK_HOME=$NDK_HOME" >> "$GITHUB_ENV"
+          echo "Using NDK_HOME=$NDK_HOME"
+
+      - name: Tag builds must be signed with the release keystore
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          if [ -z "$ANDROID_KEY_BASE64" ] || [ -z "$ANDROID_KEY_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ]; then
+            echo "ANDROID_KEY_BASE64, ANDROID_KEY_PASSWORD and ANDROID_KEY_ALIAS are required for tag builds" >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Provision signing key
+        run: |
+          if [ -n "$ANDROID_KEY_BASE64" ]; then
+            echo "$ANDROID_KEY_BASE64" | base64 -d > src-tauri/gen/android/poker.pot-upload.jks
+            KEY_ALIAS="$ANDROID_KEY_ALIAS"
+            KEY_PASSWORD="$ANDROID_KEY_PASSWORD"
+          else
+            keytool -genkeypair -keystore src-tauri/gen/android/poker.pot-upload.jks \
+              -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 \
+              -alias upload -keypass pokerpot-unreleased -storepass pokerpot-unreleased \
+              -dname "CN=poker.pot, OU=dev, O=poker.pot, C=US"
+            KEY_ALIAS=upload
+            KEY_PASSWORD=pokerpot-unreleased
+          fi
+          {
+            echo "storeFile=poker.pot-upload.jks"
+            echo "keyAlias=${KEY_ALIAS}"
+            echo "password=${KEY_PASSWORD}"
+          } > src-tauri/gen/android/keystore.properties
+
+      - name: Build the APK
+        run: bun run android:apk
+
+      - name: Collect artifacts
+        run: bun scripts/collect-artifacts.ts
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: poker-pot-android
+          path: release/*
+          if-no-files-found: error
+
+  release:
+    name: Draft release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: android
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: "${{ startsWith(github.ref_name, 'v0.') || contains(github.ref_name, '-') }}"
+          generate_release_notes: true
+          name: poker.pot ${{ github.ref_name }}
+          files: release/*

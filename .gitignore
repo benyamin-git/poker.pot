@@ -13,5 +13,6 @@ location.yaml
 src-tauri/target/
 src-tauri/gen/android/keystore.properties
 release/
+*.jks
 
 .DS_Store
