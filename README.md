@@ -22,8 +22,15 @@ editable, and standings recompute from it.
 | --- | --- | --- |
 | ![Session overview](docs/screenshots/session.png) | ![Settings](docs/screenshots/settings.png) | ![First-run setup](docs/screenshots/setup.png) |
 
+| Light | Dark | OLED |
+| --- | --- | --- |
+| ![Live match in Light](docs/screenshots/theme-light.png) | ![Live match in Dark](docs/screenshots/theme-dark.png) | ![Live match in OLED](docs/screenshots/theme-oled.png) |
+
+The base screenshots are captured in Dark; the theme strip shows the same live
+match in Light / Dark / OLED.
+
 Regenerate them with `bun run screenshots`. The script builds the app, starts a
-throwaway server on port 7405 with its own temporary data directory (it does not
+throwaway server on port 7407 with its own temporary data directory (it does not
 touch `location.yaml`), seeds a demo session, and captures the screens with
 Playwright. Install the browser once with `bunx playwright install chromium`. If
 the Playwright CDN is blocked, prefix the install with
@@ -40,6 +47,10 @@ bun run dev
 
 `bun run dev` starts two processes: the Bun API on `0.0.0.0:7403` and the Vite
 dev server on `0.0.0.0:7404` (strict), which proxies `/api` to the API.
+
+The app ships Light, Dark, and OLED themes with six accent colors (blue by
+default), switched in Settings → Appearance. The first run follows the system
+`prefers-color-scheme`, OLED is opt-in, and the choice is stored per device.
 
 To serve the built app and API from one process, for a phone on the same
 network:
@@ -61,7 +72,10 @@ first if needed. It logs to `/tmp/poker.pot-liveserver.log`, writes a pid to
 with `LIVE_SERVER_PORT`.
 
 Other scripts: `bun run test`, `bun run test:watch`, `bun run typecheck`,
-`bun run lint`, `bun run format`, `bun run screenshots`.
+`bun run lint`, `bun run format`, `bun run theme`, `bun run screenshots`.
+
+`bun run theme` regenerates `src/client/styles/tokens.css` from the palette in
+the design reference; the file is committed and never hand-edited.
 
 `bin/dev`, `bin/build` and `bin/run` are wrappers around the matching `bun`
 commands for shell aliasing.

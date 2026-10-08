@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { type Page, chromium, devices } from "@playwright/test";
+import { type Browser, type Page, chromium, devices } from "@playwright/test";
 import type { AppConfig, Session } from "../src/domain";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -11,7 +11,7 @@ const workDir = path.join(root, ".screenshots");
 const dataDir = path.join(workDir, "data");
 const locationFile = path.join(workDir, "location.yaml");
 const outputDir = path.join(root, "docs", "screenshots");
-const port = Number(process.env.SCREENSHOTS_PORT ?? 7405);
+const port = Number(process.env.SCREENSHOTS_PORT ?? 7407);
 const base = `http://127.0.0.1:${port}`;
 
 const config: AppConfig = {
@@ -165,9 +165,52 @@ async function shot(
 ): Promise<void> {
   await page.goto(`${base}${route}`, { waitUntil: "domcontentloaded" });
   await page.getByText(readyText, { exact: false }).first().waitFor({ timeout: 15_000 });
+  const theme = await page.evaluate(() => document.documentElement.dataset.theme);
+  if (theme !== "dark") {
+    throw new Error(`expected the dark theme for ${name}, got ${String(theme)}`);
+  }
   await page.waitForTimeout(300);
   await page.screenshot({ path: path.join(outputDir, `${name}.png`), fullPage });
   console.log(`captured ${name}.png`);
+}
+
+const THEME_STRIP = [
+  { name: "theme-light", theme: "light", colorScheme: "light", seed: null },
+  { name: "theme-dark", theme: "dark", colorScheme: "dark", seed: null },
+  { name: "theme-oled", theme: "oled", colorScheme: "light", seed: "oled" },
+] as const;
+
+async function captureThemeStrip(browser: Browser, route: string): Promise<void> {
+  const phone = devices["Pixel 7"];
+  for (const entry of THEME_STRIP) {
+    const context = await browser.newContext({
+      userAgent: phone.userAgent,
+      viewport: phone.viewport,
+      deviceScaleFactor: phone.deviceScaleFactor,
+      isMobile: phone.isMobile,
+      hasTouch: phone.hasTouch,
+      colorScheme: entry.colorScheme,
+      locale: "en-US",
+    });
+    if (entry.seed) {
+      const seeded = entry.seed;
+      await context.addInitScript((theme: string) => {
+        localStorage.setItem("poker.pot:theme", theme);
+        localStorage.setItem("poker.pot:accent", "blue");
+      }, seeded);
+    }
+    const page = await context.newPage();
+    await page.goto(`${base}${route}`, { waitUntil: "domcontentloaded" });
+    await page.getByText("Choose winners", { exact: false }).first().waitFor({ timeout: 15_000 });
+    const actual = await page.evaluate(() => document.documentElement.dataset.theme);
+    if (actual !== entry.theme) {
+      throw new Error(`expected ${entry.theme} for ${entry.name}, got ${String(actual)}`);
+    }
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: path.join(outputDir, `${entry.name}.png`) });
+    console.log(`captured ${entry.name}.png`);
+    await context.close();
+  }
 }
 
 async function main(): Promise<void> {
@@ -200,6 +243,10 @@ async function main(): Promise<void> {
       colorScheme: "dark",
       locale: "en-US",
     });
+    await context.addInitScript(() => {
+      localStorage.setItem("poker.pot:theme", "dark");
+      localStorage.setItem("poker.pot:accent", "blue");
+    });
     const page = await context.newPage();
 
     await shot(page, "setup", "/setup", "private data folder", true);
@@ -219,6 +266,8 @@ async function main(): Promise<void> {
     await shot(page, "settings", "/settings", "Minimum raise", true);
 
     await context.close();
+
+    await captureThemeStrip(browser, `/sessions/${fridayId}/matches/${liveMatchId}`);
   } finally {
     await browser.close();
     server.kill("SIGTERM");
