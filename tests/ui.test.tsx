@@ -6,7 +6,6 @@ import { RoundsHistory } from "../src/client/components/RoundsHistory";
 import { newId } from "../src/client/id";
 import { SessionsScreen } from "../src/client/screens/SessionsScreen";
 import { AppearanceSettings } from "../src/client/screens/SettingsScreen";
-import { SetupScreen } from "../src/client/screens/SetupScreen";
 import { ConfigProvider } from "../src/client/state/config";
 import { type AppConfig, type Match, deriveMatch } from "../src/domain";
 
@@ -37,13 +36,14 @@ describe("client id", () => {
 });
 
 describe("ui smoke", () => {
-  it("renders the first-run setup screen", () => {
+  it("renders the sessions screen at the root route without a setup redirect", () => {
     const html = renderToString(
-      <MemoryRouter>
-        <SetupScreen />
+      <MemoryRouter initialEntries={["/"]}>
+        <AppShell />
       </MemoryRouter>,
     );
-    expect(html).toContain("private data folder");
+    expect(html).toContain("poker.pot");
+    expect(html).toContain('aria-label="New session"');
   });
 
   it("renders the sessions screen inside providers", () => {

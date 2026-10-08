@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { SessionSummary } from "../../shared/api";
 import { NewSessionSheet } from "../components/NewSessionSheet";
 import { IconPlus } from "../components/icons";
 import { Card, Center, Fab, Pill, Screen, StatRow, TopBar } from "../components/ui";
 import { playerName } from "../format";
 import { useConfig } from "../state/config";
 import { useSessions } from "../state/useSessions";
+import type { SessionSummary } from "../storage";
 
 function SessionCard({ session }: { session: SessionSummary }) {
   const navigate = useNavigate();

@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import type { AppConfig } from "../../domain";
-import { api } from "../api";
+import { store } from "../storage";
 
 interface ConfigContextValue {
   config: AppConfig | null;
@@ -28,7 +28,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      setConfig(await api.getConfig());
+      setConfig(await store.getConfig());
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load config");
@@ -38,7 +38,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const save = useCallback(async (next: AppConfig) => {
-    const saved = await api.saveConfig(next);
+    const saved = await store.saveConfig(next);
     setConfig(saved);
   }, []);
 

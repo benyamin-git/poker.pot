@@ -1,28 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Command, Session } from "../../domain";
-import { api } from "../api";
-
-const cacheKey = (id: string) => `poker.pot.session.${id}`;
-
-function readCache(id: string): Session | null {
-  try {
-    const raw = localStorage.getItem(cacheKey(id));
-    return raw ? (JSON.parse(raw) as Session) : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeCache(session: Session): void {
-  try {
-    localStorage.setItem(cacheKey(session.id), JSON.stringify(session));
-  } catch {
-    // storage may be unavailable; the server remains the source of truth
-  }
-}
+import { store } from "../storage";
 
 export function useSession(id: string | undefined) {
-  const [session, setSession] = useState<Session | null>(() => (id ? readCache(id) : null));
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(Boolean(id));
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,14 +12,12 @@ export function useSession(id: string | undefined) {
   useEffect(() => {
     activeId.current = id;
     if (!id) return;
-    setSession(readCache(id));
     setLoading(true);
-    api
+    store
       .getSession(id)
       .then((next) => {
         if (activeId.current !== id) return;
         setSession(next);
-        writeCache(next);
         setError(null);
       })
       .catch((err: unknown) => {
@@ -56,9 +35,8 @@ export function useSession(id: string | undefined) {
       if (!currentId) return null;
       setSending(true);
       try {
-        const next = await api.command(currentId, command);
+        const next = await store.command(currentId, command);
         setSession(next);
-        writeCache(next);
         setError(null);
         return next;
       } catch (err) {
@@ -75,9 +53,8 @@ export function useSession(id: string | undefined) {
     if (!id) return;
     setLoading(true);
     try {
-      const next = await api.getSession(id);
+      const next = await store.getSession(id);
       setSession(next);
-      writeCache(next);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load session");

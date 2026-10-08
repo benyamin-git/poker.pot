@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { SessionSummary } from "../../shared/api";
-import { api } from "../api";
+import { type SessionSummary, store } from "../storage";
 
 export function useSessions() {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
@@ -10,7 +9,7 @@ export function useSessions() {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      setSessions(await api.listSessions());
+      setSessions(await store.listSessionSummaries());
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load sessions");
@@ -24,8 +23,8 @@ export function useSessions() {
   }, [refresh]);
 
   const remove = useCallback(async (id: string) => {
-    await api.deleteSession(id);
-    setSessions((current) => current.filter((s) => s.id !== id));
+    await store.deleteSession(id);
+    setSessions((current) => current.filter((session) => session.id !== id));
   }, []);
 
   return { sessions, loading, error, refresh, remove };

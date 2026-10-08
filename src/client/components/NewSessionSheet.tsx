@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { api } from "../api";
+import { store } from "../storage";
 import { PlayerPicker } from "./PlayerPicker";
 import { Button, Sheet } from "./ui";
 
@@ -27,7 +27,7 @@ export function NewSessionSheet({
     setBusy(true);
     setError(null);
     try {
-      const session = await api.createSession(name.trim() || "Poker night", selected);
+      const session = await store.createSession(name.trim() || "Poker night", selected);
       onCreated(session.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create the session");

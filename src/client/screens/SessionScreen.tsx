@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { type Command, deriveMatch, sessionBalances } from "../../domain";
-import { api } from "../api";
 import { RosterSheet } from "../components/RosterSheet";
 import { ConfirmDialog, TypedConfirmDialog } from "../components/dialogs";
 import { Button, Card, Center, Pill, Screen, StatRow, TopBar } from "../components/ui";
 import { playerName } from "../format";
 import { useConfig } from "../state/config";
 import { useSession } from "../state/useSession";
+import { store } from "../storage";
 
 type DialogKind = "pause" | "resume" | "end" | "remove" | null;
 
@@ -209,7 +209,7 @@ export function SessionScreen() {
           onConfirm={async () => {
             setBusy(true);
             try {
-              await api.deleteSession(session.id);
+              await store.deleteSession(session.id);
               navigate("/", { replace: true });
             } finally {
               setBusy(false);
