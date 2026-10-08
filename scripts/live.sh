@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Start the live server (built UI + API) in the background.
+# Start the live static preview (built UI) in the background.
 set -euo pipefail
 
 PORT="${LIVE_SERVER_PORT:-7403}"

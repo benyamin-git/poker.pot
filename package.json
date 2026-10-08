@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "concurrently -k -n server,web -c blue,magenta \"bun --watch src/server/index.ts\" \"vite\"",
+    "dev": "vite",
     "build": "vite build",
     "start": "bun src/server/index.ts",
     "screenshots": "bun run build && bun scripts/screenshots.ts",
@@ -32,7 +32,6 @@
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.2",
-    "concurrently": "^9.0.1",
     "fake-indexeddb": "^6.2.5",
     "typescript": "^5.6.3",
     "vite": "^5.4.9",

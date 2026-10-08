@@ -56,12 +56,6 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 7404,
     strictPort: true,
-    proxy: {
-      "/api": {
-        target: "http://localhost:7403",
-        changeOrigin: true,
-      },
-    },
   },
   build: {
     outDir: "dist",
