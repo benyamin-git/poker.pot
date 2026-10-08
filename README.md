@@ -150,6 +150,10 @@ Chip counts are integers.
 - `config` — `validateConfig` and `resolvePlayers`.
 - `server` — setup, config and session REST routes over a temp data directory.
 - `client-format` and `ui` — client helpers plus SSR smoke renders.
+- `theme` and `theme-runtime` — token generator invariants (documented
+  primaries, every accent × theme role set, contrast, committed CSS) and
+  appearance persistence.
+- `match-turn` — the live match's next-player selection.
 
 ## Project layout
 
@@ -159,5 +163,5 @@ src/server/    Bun HTTP API, atomic YAML storage, setup and config
 src/client/    React + Vite app
 src/shared/    API types shared by client and server
 tests/         Vitest suites
-scripts/       Playwright screenshot generator
+scripts/       token generator (theme.ts) and Playwright screenshots
 ```
