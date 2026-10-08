@@ -201,6 +201,7 @@ export function SettingsScreen() {
             <p className="muted">
               Last backup: {backupAt ? new Date(backupAt).toLocaleString() : "never"}
             </p>
+            <p className="muted">Version {__APP_VERSION__}</p>
             <Button variant="tonal" block disabled={exporting} onClick={() => void exportBackup()}>
               {exporting ? "Preparing…" : "Export backup"}
             </Button>

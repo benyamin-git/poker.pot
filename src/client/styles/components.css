@@ -584,3 +584,26 @@
 .negative {
   color: var(--loss);
 }
+
+.update-banner {
+  position: fixed;
+  inset-inline: var(--space-4);
+  bottom: calc(env(safe-area-inset-bottom) + var(--tabbar-h) + var(--space-4));
+  z-index: 40;
+  margin-inline: auto;
+  max-inline-size: 448px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  padding-inline-start: var(--space-4);
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  border: 1px solid color-mix(in srgb, var(--outline) 30%, transparent);
+  border-radius: var(--radius-lg);
+}
+
+.update-banner__text {
+  flex: 1;
+  font-size: var(--text-sm);
+}

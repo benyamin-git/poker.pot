@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { HashRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { UpdateBanner } from "./components/UpdateBanner";
 import { IconGear, IconList } from "./components/icons";
 import { BottomTabs, Center, Screen } from "./components/ui";
 import { MatchScreen } from "./screens/MatchScreen";
@@ -25,6 +26,7 @@ export function AppShell() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </ConfigProvider>
+      <UpdateBanner />
       {showTabs ? (
         <BottomTabs
           items={[
@@ -73,9 +75,9 @@ function OnboardingGate() {
 export function App() {
   return (
     <ErrorBoundary>
-      <BrowserRouter>
+      <HashRouter>
         <OnboardingGate />
-      </BrowserRouter>
+      </HashRouter>
     </ErrorBoundary>
   );
 }

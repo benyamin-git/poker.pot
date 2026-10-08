@@ -9,6 +9,19 @@ import { AppearanceSettings } from "../src/client/screens/SettingsScreen";
 import { ConfigProvider } from "../src/client/state/config";
 import { type AppConfig, type Match, deriveMatch } from "../src/domain";
 
+const pwaMock = vi.hoisted(() => ({
+  needRefresh: false,
+  updateServiceWorker: vi.fn(),
+}));
+
+vi.mock("virtual:pwa-register/react", () => ({
+  useRegisterSW: () => ({
+    needRefresh: [pwaMock.needRefresh, () => undefined],
+    offlineReady: [false, () => undefined],
+    updateServiceWorker: pwaMock.updateServiceWorker,
+  }),
+}));
+
 const config: AppConfig = {
   players: [
     { id: "a", name: "Ali" },
@@ -90,6 +103,20 @@ describe("ui smoke", () => {
     );
     expect(html).toContain('aria-label="New session"');
     expect(html).not.toContain("Add players in settings first");
+  });
+
+  it("shows the update banner when a new version is waiting", () => {
+    pwaMock.needRefresh = true;
+    try {
+      const html = renderToString(
+        <MemoryRouter initialEntries={["/"]}>
+          <AppShell />
+        </MemoryRouter>,
+      );
+      expect(html).toContain("New version available");
+    } finally {
+      pwaMock.needRefresh = false;
+    }
   });
 
   it("renders the appearance controls with the active theme and accent selected", () => {
