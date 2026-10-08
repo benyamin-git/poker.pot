@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from "react";
+import { Button } from "./ui";
 
 interface State {
   error: Error | null;
@@ -18,13 +19,9 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
           <div className="center">
             <h1 className="title-lg">Something went wrong</h1>
             <p className="muted">{this.state.error.message}</p>
-            <button
-              type="button"
-              className="btn btn--primary"
-              onClick={() => this.setState({ error: null })}
-            >
+            <Button variant="primary" onClick={() => this.setState({ error: null })}>
               Try again
-            </button>
+            </Button>
           </div>
         </div>
       );

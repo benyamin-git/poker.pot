@@ -1,6 +1,7 @@
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
+import { AppShell } from "../src/client/App";
 import { RoundsHistory } from "../src/client/components/RoundsHistory";
 import { newId } from "../src/client/id";
 import { SessionsScreen } from "../src/client/screens/SessionsScreen";
@@ -53,6 +54,41 @@ describe("ui smoke", () => {
       </MemoryRouter>,
     );
     expect(html).toContain("poker.pot");
+  });
+
+  it("shows bottom tabs on root screens only", () => {
+    const home = renderToString(
+      <MemoryRouter initialEntries={["/"]}>
+        <AppShell />
+      </MemoryRouter>,
+    );
+    expect(home).toContain('aria-label="Main"');
+
+    const settings = renderToString(
+      <MemoryRouter initialEntries={["/settings"]}>
+        <AppShell />
+      </MemoryRouter>,
+    );
+    expect(settings).toContain('aria-label="Main"');
+
+    const nested = renderToString(
+      <MemoryRouter initialEntries={["/sessions/abc"]}>
+        <AppShell />
+      </MemoryRouter>,
+    );
+    expect(nested).not.toContain('aria-label="Main"');
+  });
+
+  it("renders the New session FAB on the sessions screen", () => {
+    const html = renderToString(
+      <MemoryRouter>
+        <ConfigProvider>
+          <SessionsScreen />
+        </ConfigProvider>
+      </MemoryRouter>,
+    );
+    expect(html).toContain('aria-label="New session"');
+    expect(html).not.toContain("Add players in settings first");
   });
 
   it("renders round history text for bets and folds", () => {

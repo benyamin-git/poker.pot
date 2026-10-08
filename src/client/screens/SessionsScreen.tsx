@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { SessionSummary } from "../../shared/api";
 import { NewSessionSheet } from "../components/NewSessionSheet";
-import { Button, Card, Center, Pill, Screen, StatRow, TopBar } from "../components/ui";
+import { IconPlus } from "../components/icons";
+import { Card, Center, Fab, Pill, Screen, StatRow, TopBar } from "../components/ui";
 import { playerName } from "../format";
 import { useConfig } from "../state/config";
 import { useSessions } from "../state/useSessions";
@@ -50,19 +51,7 @@ export function SessionsScreen() {
   return (
     <>
       <Screen>
-        <TopBar
-          title="poker.pot"
-          action={
-            <button
-              type="button"
-              className="icon-btn"
-              aria-label="Settings"
-              onClick={() => navigate("/settings")}
-            >
-              ⚙
-            </button>
-          }
-        />
+        <TopBar title="poker.pot" />
         <div className="screen__body">
           {error ? <p className="negative">{error}</p> : null}
           {loading && sessions.length === 0 ? (
@@ -80,16 +69,13 @@ export function SessionsScreen() {
             <SessionCard key={session.id} session={session} />
           ))}
         </div>
-        <Button
-          variant="primary"
-          size="lg"
-          block
-          disabled={players.length === 0}
-          onClick={() => setCreating(true)}
-        >
-          {players.length === 0 ? "Add players in settings first" : "New session"}
-        </Button>
       </Screen>
+      <Fab
+        label="New session"
+        onClick={() => (players.length === 0 ? navigate("/settings") : setCreating(true))}
+      >
+        <IconPlus />
+      </Fab>
       {creating ? (
         <NewSessionSheet
           players={players}
