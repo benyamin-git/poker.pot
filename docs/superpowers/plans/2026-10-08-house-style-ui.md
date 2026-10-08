@@ -3,7 +3,7 @@
 **Spec:** `docs/superpowers/specs/2026-10-08-house-style-ui-design.md` (commit
 `7616a88`)
 **Date:** 2026-10-08
-**Status:** Awaiting approval (gate 2)
+**Status:** Approved (gate 2)
 
 ## Global constraints (from the spec)
 
@@ -37,7 +37,7 @@
 Each task is one commit. Do not start a task before its dependencies are
 committed and green.
 
-### T1 — Token pipeline
+### Task 1 — Token pipeline
 
 **Depends on:** none.
 
@@ -123,7 +123,7 @@ suites pass); `bun run typecheck`; `bun run lint` (expected: clean).
 
 **Commit:** `feat(theme): add OKLCH token generator and generated stylesheet`
 
-### T2 — Theme runtime and pre-paint
+### Task 2 — Theme runtime and pre-paint
 
 **Depends on:** T1 (types/constants).
 
@@ -170,7 +170,7 @@ OS; reload with a stored OLED choice → no light flash.
 
 **Commit:** `feat(theme): add theme runtime and pre-paint script`
 
-### T3 — Design-system layer
+### Task 3 — Design-system layer
 
 **Depends on:** T1 (tokens.css exists). T2 is not required for this task.
 
@@ -236,7 +236,7 @@ light, and dark via OS).
 
 **Commit:** `feat(client): add house-style design system layer`
 
-### T4 — Shell and navigation
+### Task 4 — Shell and navigation
 
 **Depends on:** T3.
 
@@ -261,7 +261,7 @@ and match.
 
 **Commit:** `feat(client): add tabbed shell and sessions FAB`
 
-### T5 — Match screen structure
+### Task 5 — Match screen structure
 
 **Depends on:** T3.
 
@@ -283,7 +283,7 @@ behave exactly as before.
 
 **Commit:** `feat(client): restyle live match with sticky pot and next-player hint`
 
-### T6 — Overlays and accessibility
+### Task 6 — Overlays and accessibility
 
 **Depends on:** T3.
 
@@ -322,7 +322,7 @@ triggering control.
 
 **Commit:** `feat(client): make sheets and dialogs accessible with focus management`
 
-### T7 — Settings appearance and Setup
+### Task 7 — Settings appearance and Setup
 
 **Depends on:** T2 (runtime), T3 (styles).
 
@@ -342,7 +342,7 @@ mark Settings dirty; Save still persists players/rules.
 
 **Commit:** `feat(client): add appearance settings and restyle setup`
 
-### T8 — Screenshots and docs
+### Task 8 — Screenshots and docs
 
 **Depends on:** T1–T7.
 
