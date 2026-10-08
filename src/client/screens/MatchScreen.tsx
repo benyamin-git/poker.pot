@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   type ActionType,
@@ -12,7 +12,8 @@ import { ActionSheet } from "../components/ActionSheet";
 import { RoundsHistory } from "../components/RoundsHistory";
 import { StartMatchSheet } from "../components/StartMatchSheet";
 import { WinnersSheet } from "../components/WinnersSheet";
-import { Button, Card, Center, Pill, Screen, StatRow, TopBar } from "../components/ui";
+import { IconClose, IconHistory } from "../components/icons";
+import { Button, Card, Center, IconButton, Pill, Screen, StatRow, TopBar } from "../components/ui";
 import { playerName } from "../format";
 import { useConfig } from "../state/config";
 import { useSession } from "../state/useSession";
@@ -24,6 +25,25 @@ type SheetState =
   | { kind: "record"; player: PlayerSnapshot; roundIndex: number }
   | { kind: "edit"; player: PlayerSnapshot; action: DerivedAction; roundIndex: number }
   | null;
+
+export interface TurnState {
+  folded: boolean;
+  allIn: boolean;
+  acted: boolean;
+  roundTotal: number;
+}
+
+export function isToAct(turn: TurnState, roundHigh: number): boolean {
+  return !turn.folded && !turn.allIn && (!turn.acted || turn.roundTotal < roundHigh);
+}
+
+export function nextToAct<T extends { id: string }>(
+  participants: readonly T[],
+  turnOf: (player: T) => TurnState,
+  roundHigh: number,
+): T | undefined {
+  return participants.find((player) => isToAct(turnOf(player), roundHigh));
+}
 
 function roundLabel(index: number): string {
   return index === 0 ? "Preflop" : `Round ${index + 1}`;
@@ -46,6 +66,18 @@ export function MatchScreen() {
       return null;
     }
   }, [match, config]);
+
+  const gridRef = useRef<HTMLDivElement>(null);
+  const roundIndex = match && derived && match.status !== "done" ? currentRoundIndex(derived) : -1;
+
+  useEffect(() => {
+    if (roundIndex < 0) return;
+    const node = gridRef.current?.querySelector<HTMLElement>('[data-next="true"]');
+    if (!node) return;
+    const reduce =
+      typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    node.scrollIntoView({ block: "nearest", behavior: reduce ? "auto" : "smooth" });
+  }, [roundIndex]);
 
   const sendCommand = async (command: Command) => {
     return await send(command);
@@ -95,8 +127,7 @@ export function MatchScreen() {
 
   const currency = config.currencyLabel;
   const done = match.status === "done";
-  const index = done ? -1 : currentRoundIndex(derived);
-  const currentRound = derived.rounds.find((r) => r.index === index);
+  const currentRound = derived.rounds.find((r) => r.index === roundIndex);
   const actedThisRound = new Set((currentRound?.actions ?? []).map((a) => a.playerId));
   const roundTotals = new Map<string, number>();
   for (const action of currentRound?.actions ?? []) {
@@ -106,6 +137,15 @@ export function MatchScreen() {
     (high, action) => Math.max(high, action.roundTotal),
     0,
   );
+
+  const turnOf = (player: PlayerSnapshot): TurnState => ({
+    folded: derived.folded.includes(player.id),
+    allIn: derived.allIn.includes(player.id),
+    acted: actedThisRound.has(player.id),
+    roundTotal: roundTotals.get(player.id) ?? 0,
+  });
+
+  const next = nextToAct(match.participants, turnOf, roundHigh);
 
   const contextBefore = (target: DerivedAction) => {
     let high = 0;
@@ -143,7 +183,7 @@ export function MatchScreen() {
     const roundTotal = roundTotals.get(player.id) ?? 0;
     const toAct = !folded && !allIn && (!acted || roundTotal < roundHigh);
     if (toAct) {
-      setSheet({ kind: "record", player, roundIndex: index });
+      setSheet({ kind: "record", player, roundIndex });
       return;
     }
     const latest =
@@ -221,71 +261,64 @@ export function MatchScreen() {
           action={
             <>
               <Pill status="active">live</Pill>
-              <button
-                type="button"
-                className="icon-btn"
-                aria-label="Round history"
-                onClick={() => setSheet({ kind: "history" })}
-              >
-                ☰
-              </button>
+              <IconButton label="Round history" onClick={() => setSheet({ kind: "history" })}>
+                <IconHistory />
+              </IconButton>
             </>
           }
         />
-        <div className="screen__body screen__body--fixed">
-          <Card>
-            <div className="row">
-              <span className="label">Pot</span>
-              <div className="spacer" />
-              <span className="label">{roundLabel(index)}</span>
-            </div>
-            <p className="display amount">
-              {derived.pot}
-              {currency ? ` ${currency}` : ""}
-            </p>
-            <p className="muted">
-              Current bet {roundHigh}
-              {derived.active.length === 0 ? " · everyone is all-in" : ""}
-            </p>
-          </Card>
-
-          <div className="player-grid" data-cols={match.participants.length > 4 ? "3" : "2"}>
-            {match.participants.map((player) => {
-              const folded = derived.folded.includes(player.id);
-              const allIn = derived.allIn.includes(player.id);
-              const acted = actedThisRound.has(player.id);
-              const roundTotal = roundTotals.get(player.id) ?? 0;
-              const remaining = Math.max(
-                0,
-                config.maxBet - (derived.contributions[player.id] ?? 0),
-              );
-              const toCall = Math.min(Math.max(0, roundHigh - roundTotal), remaining);
-              const toAct = !folded && !allIn && (!acted || roundTotal < roundHigh);
-              const meta = folded
-                ? "folded"
-                : allIn
-                  ? "all-in"
-                  : toAct
-                    ? roundHigh > 0
-                      ? `call ${toCall}`
-                      : "to act"
-                    : `bet ${roundTotal}`;
-              return (
-                <button
-                  key={player.id}
-                  type="button"
-                  className="player-btn"
-                  data-done={!toAct}
-                  data-folded={folded}
-                  data-allin={allIn}
-                  onClick={() => openPlayer(player)}
-                >
-                  <span>{player.name}</span>
-                  <span className="player-btn__meta">{meta}</span>
-                </button>
-              );
-            })}
+        <Card>
+          <div className="row">
+            <span className="label">Pot</span>
+            <div className="spacer" />
+            <span className="label">{roundLabel(roundIndex)}</span>
           </div>
+          <p className="display amount">
+            {derived.pot}
+            {currency ? ` ${currency}` : ""}
+          </p>
+          <p className="muted">
+            Current bet {roundHigh}
+            {derived.active.length === 0 ? " · everyone is all-in" : ""}
+          </p>
+        </Card>
+
+        <div
+          ref={gridRef}
+          className="player-grid"
+          data-cols={match.participants.length > 4 ? "3" : "2"}
+        >
+          {match.participants.map((player) => {
+            const turn = turnOf(player);
+            const { folded, allIn, roundTotal } = turn;
+            const remaining = Math.max(0, config.maxBet - (derived.contributions[player.id] ?? 0));
+            const toCall = Math.min(Math.max(0, roundHigh - roundTotal), remaining);
+            const toAct = isToAct(turn, roundHigh);
+            const meta = folded
+              ? "folded"
+              : allIn
+                ? "all-in"
+                : toAct
+                  ? roundHigh > 0
+                    ? `call ${toCall}`
+                    : "to act"
+                  : `bet ${roundTotal}`;
+            return (
+              <button
+                key={player.id}
+                type="button"
+                className="player-btn"
+                data-done={!toAct}
+                data-folded={folded}
+                data-allin={allIn}
+                data-next={player.id === next?.id}
+                onClick={() => openPlayer(player)}
+              >
+                <span>{player.name}</span>
+                <span className="player-btn__meta">{meta}</span>
+              </button>
+            );
+          })}
         </div>
 
         <Button
@@ -380,14 +413,9 @@ export function MatchScreen() {
             <div className="row">
               <h2 className="title-lg">Round history</h2>
               <div className="spacer" />
-              <button
-                type="button"
-                className="icon-btn"
-                aria-label="Close history"
-                onClick={() => setSheet(null)}
-              >
-                ✕
-              </button>
+              <IconButton label="Close history" onClick={() => setSheet(null)}>
+                <IconClose />
+              </IconButton>
             </div>
             <div className="screen__body">
               <RoundsHistory
