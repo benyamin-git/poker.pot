@@ -1,5 +1,7 @@
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "⌫"] as const;
 
+const KEY_LABELS: Record<string, string> = { C: "Clear", "⌫": "Backspace" };
+
 export function NumberPad({
   value,
   onChange,
@@ -33,7 +35,13 @@ export function NumberPad({
   return (
     <div className="numpad">
       {KEYS.map((key) => (
-        <button key={key} type="button" className="numpad__key" onClick={() => press(key)}>
+        <button
+          key={key}
+          type="button"
+          className="numpad__key"
+          aria-label={KEY_LABELS[key] ?? key}
+          onClick={() => press(key)}
+        >
           {key}
         </button>
       ))}

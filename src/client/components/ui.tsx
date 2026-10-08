@@ -1,6 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import { IconBack, IconClose } from "./icons";
+import { useFocusTrap } from "./useFocusTrap";
 
 type ButtonVariant = "primary" | "tonal" | "ghost" | "danger";
 type ButtonSize = "sm" | "md" | "lg";
@@ -186,9 +187,10 @@ export function Sheet({
   full?: boolean;
   children: ReactNode;
 }) {
+  const panelRef = useFocusTrap<HTMLDialogElement>(true, onClose);
   return (
     <div className={full ? "sheet sheet--full" : "sheet"}>
-      <dialog open className="sheet__panel" aria-modal="true" aria-label={title}>
+      <dialog ref={panelRef} open className="sheet__panel" aria-modal="true" aria-label={title}>
         <header className="sheet__header">
           <h2 className="title-lg">{title}</h2>
           <IconButton label="Close" onClick={onClose}>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { PlayerSnapshot, Session } from "../../domain";
 import { PlayerPicker } from "./PlayerPicker";
-import { Button } from "./ui";
+import { Button, Sheet } from "./ui";
 
 export function StartMatchSheet({
   session,
@@ -36,24 +36,21 @@ export function StartMatchSheet({
   };
 
   return (
-    <div className="sheet">
-      <div className="sheet__panel">
-        <h2 className="title-lg">Who is in this match?</h2>
-        <p className="muted">
-          Defaults to the session roster. Add or remove anyone from the config — this only affects
-          this match.
-        </p>
-        <PlayerPicker players={players} selected={selected} onToggle={toggle} />
-        {error ? <p className="negative">{error}</p> : null}
-        <div className="row">
-          <Button variant="ghost" block disabled={busy} onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="primary" block disabled={busy || selected.length < 2} onClick={start}>
-            {busy ? "Starting…" : "Start match"}
-          </Button>
-        </div>
+    <Sheet title="Who is in this match?" onClose={onClose}>
+      <p className="muted">
+        Defaults to the session roster. Add or remove anyone from the config — this only affects
+        this match.
+      </p>
+      <PlayerPicker players={players} selected={selected} onToggle={toggle} />
+      {error ? <p className="negative">{error}</p> : null}
+      <div className="row">
+        <Button variant="ghost" block disabled={busy} onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="primary" block disabled={busy || selected.length < 2} onClick={start}>
+          {busy ? "Starting…" : "Start match"}
+        </Button>
       </div>
-    </div>
+    </Sheet>
   );
 }

@@ -474,6 +474,10 @@
   padding: var(--space-3);
   font-weight: 650;
   text-align: start;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
 }
 
 .choice[data-selected="true"] {

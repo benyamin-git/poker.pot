@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { api } from "../api";
 import { PlayerPicker } from "./PlayerPicker";
-import { Button } from "./ui";
+import { Button, Sheet } from "./ui";
 
 export function NewSessionSheet({
   players,
@@ -36,34 +36,31 @@ export function NewSessionSheet({
   };
 
   return (
-    <div className="sheet">
-      <div className="sheet__panel">
-        <h2 className="title-lg">New session</h2>
-        <div className="stack">
-          <label className="label" htmlFor="sessionName">
-            Name
-          </label>
-          <input
-            id="sessionName"
-            className="text-input"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-          />
-        </div>
-        <div className="stack">
-          <span className="label">Players at the table</span>
-          <PlayerPicker players={players} selected={selected} onToggle={toggle} />
-        </div>
-        {error ? <p className="negative">{error}</p> : null}
-        <div className="row">
-          <Button variant="ghost" block onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="primary" block disabled={busy || selected.length === 0} onClick={create}>
-            {busy ? "Creating…" : "Create session"}
-          </Button>
-        </div>
+    <Sheet title="New session" onClose={onClose}>
+      <div className="stack">
+        <label className="label" htmlFor="sessionName">
+          Name
+        </label>
+        <input
+          id="sessionName"
+          className="text-input"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+        />
       </div>
-    </div>
+      <div className="stack">
+        <span className="label">Players at the table</span>
+        <PlayerPicker players={players} selected={selected} onToggle={toggle} />
+      </div>
+      {error ? <p className="negative">{error}</p> : null}
+      <div className="row">
+        <Button variant="ghost" block onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="primary" block disabled={busy || selected.length === 0} onClick={create}>
+          {busy ? "Creating…" : "Create session"}
+        </Button>
+      </div>
+    </Sheet>
   );
 }

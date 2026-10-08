@@ -1,10 +1,26 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { Button } from "./ui";
+import { useFocusTrap } from "./useFocusTrap";
 
-function DialogShell({ children }: { children: ReactNode }) {
+function DialogShell({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  const titleId = useId();
+  const panelRef = useFocusTrap<HTMLDialogElement>(true, onClose);
   return (
-    <dialog open className="dialog" aria-modal="true">
-      <div className="dialog__panel">{children}</div>
+    <dialog ref={panelRef} open className="dialog" aria-modal="true" aria-labelledby={titleId}>
+      <div className="dialog__panel">
+        <h2 className="title" id={titleId}>
+          {title}
+        </h2>
+        {children}
+      </div>
     </dialog>
   );
 }
@@ -27,8 +43,7 @@ export function ConfirmDialog({
   onCancel: () => void;
 }) {
   return (
-    <DialogShell>
-      <h2 className="title">{title}</h2>
+    <DialogShell title={title} onClose={onCancel}>
       <div className="muted">{message}</div>
       <div className="row">
         <Button variant="ghost" block onClick={onCancel}>
@@ -64,22 +79,24 @@ export function TypedConfirmDialog({
   }, []);
   const matches = typed.trim() === phrase;
   return (
-    <DialogShell>
-      <h2 className="title">{title}</h2>
+    <DialogShell title={title} onClose={onCancel}>
       <div className="muted">{message}</div>
-      <p className="muted">
-        Type <strong>{phrase}</strong> to confirm.
-      </p>
-      <input
-        ref={inputRef}
-        className="text-input"
-        value={typed}
-        autoCapitalize="none"
-        autoCorrect="off"
-        spellCheck={false}
-        onChange={(event) => setTyped(event.target.value)}
-        placeholder={phrase}
-      />
+      <div className="stack">
+        <label className="label" htmlFor="confirmPhrase">
+          Type {phrase} to confirm
+        </label>
+        <input
+          id="confirmPhrase"
+          ref={inputRef}
+          className="text-input"
+          value={typed}
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          onChange={(event) => setTyped(event.target.value)}
+          placeholder={phrase}
+        />
+      </div>
       <div className="row">
         <Button variant="ghost" block onClick={onCancel}>
           Cancel

@@ -1,4 +1,5 @@
 import type { PlayerSnapshot } from "../../domain";
+import { IconCheck } from "./icons";
 
 export function PlayerPicker({
   players,
@@ -19,9 +20,11 @@ export function PlayerPicker({
             type="button"
             className="choice"
             data-selected={isSelected}
+            aria-pressed={isSelected}
             onClick={() => onToggle(player.id)}
           >
-            {player.name}
+            <span>{player.name}</span>
+            {isSelected ? <IconCheck size={16} /> : null}
           </button>
         );
       })}

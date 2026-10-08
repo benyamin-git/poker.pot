@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { PlayerSnapshot } from "../../domain";
-import { Button } from "./ui";
+import { Button, Sheet } from "./ui";
 
 export function WinnersSheet({
   participants,
@@ -41,56 +41,54 @@ export function WinnersSheet({
   };
 
   return (
-    <div className="sheet">
-      <div className="sheet__panel">
-        <div className="row">
-          <span className="label">Pot</span>
-          <div className="spacer" />
-          <span className="muted">{count > 0 ? `${count} winner(s)` : "pick winners"}</span>
-        </div>
-        <p className="display amount">
-          {pot}
-          {currency ? ` ${currency}` : ""}
-        </p>
-        {count > 0 ? (
-          <p className="muted">
-            {share}
-            {currency ? ` ${currency}` : ""} each
-            {remainder > 0
-              ? ` · ${remainder} extra ${remainder === 1 ? "chip" : "chips"} assigned by chance`
-              : ""}
-          </p>
-        ) : (
-          <p className="muted">Tap everyone who shares the pot. Shares are equal.</p>
-        )}
-
-        <div className="player-grid" data-cols={participants.length > 4 ? "3" : "2"}>
-          {participants.map((player) => (
-            <button
-              key={player.id}
-              type="button"
-              className="player-btn"
-              data-done={!selected.includes(player.id)}
-              onClick={() => toggle(player.id)}
-            >
-              <span>{player.name}</span>
-              <span className="player-btn__meta">
-                {selected.includes(player.id) ? "winner" : "tap to pick"}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        {error ? <p className="negative">{error}</p> : null}
-        <div className="row">
-          <Button variant="ghost" block disabled={busy} onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button variant="primary" block disabled={busy || count === 0} onClick={submit}>
-            {busy ? "Saving…" : "Confirm winners"}
-          </Button>
-        </div>
+    <Sheet title="Choose winners" onClose={onCancel}>
+      <div className="row">
+        <span className="label">Pot</span>
+        <div className="spacer" />
+        <span className="muted">{count > 0 ? `${count} winner(s)` : "pick winners"}</span>
       </div>
-    </div>
+      <p className="display amount">
+        {pot}
+        {currency ? ` ${currency}` : ""}
+      </p>
+      {count > 0 ? (
+        <p className="muted">
+          {share}
+          {currency ? ` ${currency}` : ""} each
+          {remainder > 0
+            ? ` · ${remainder} extra ${remainder === 1 ? "chip" : "chips"} assigned by chance`
+            : ""}
+        </p>
+      ) : (
+        <p className="muted">Tap everyone who shares the pot. Shares are equal.</p>
+      )}
+
+      <div className="player-grid" data-cols={participants.length > 4 ? "3" : "2"}>
+        {participants.map((player) => (
+          <button
+            key={player.id}
+            type="button"
+            className="player-btn"
+            data-done={!selected.includes(player.id)}
+            onClick={() => toggle(player.id)}
+          >
+            <span>{player.name}</span>
+            <span className="player-btn__meta">
+              {selected.includes(player.id) ? "winner" : "tap to pick"}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {error ? <p className="negative">{error}</p> : null}
+      <div className="row">
+        <Button variant="ghost" block disabled={busy} onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button variant="primary" block disabled={busy || count === 0} onClick={submit}>
+          {busy ? "Saving…" : "Confirm winners"}
+        </Button>
+      </div>
+    </Sheet>
   );
 }

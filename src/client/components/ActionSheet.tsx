@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import type { Action, ActionType, PlayerSnapshot } from "../../domain";
 import { ConfirmDialog } from "./dialogs";
 import { NumberPad } from "./numpad";
-import { Button } from "./ui";
+import { Button, Sheet } from "./ui";
 
 export interface ActionSheetProps {
   player: PlayerSnapshot;
@@ -110,109 +110,105 @@ export function ActionSheet({
 
   return (
     <>
-      <div className="sheet sheet--full">
-        <div className="sheet__panel">
-          <div className="row">
-            <span className="label">
-              {mode === "edit" ? "Edit history" : "Betting"} · {roundLabel}
-            </span>
-            <div className="spacer" />
-            <span className="muted">{player.name}</span>
-          </div>
+      <Sheet title={mode === "edit" ? "Edit history" : "Betting"} onClose={onCancel} full>
+        <div className="row">
+          <span className="label">{roundLabel}</span>
+          <div className="spacer" />
+          <span className="muted">{player.name}</span>
+        </div>
 
+        <div>
+          <span className="label">Pot</span>
+          <p className="display amount">
+            {pot}
+            {currency ? ` ${currency}` : ""}
+          </p>
+        </div>
+
+        <div className="row">
           <div>
-            <span className="label">Pot</span>
-            <p className="display amount">
-              {pot}
-              {currency ? ` ${currency}` : ""}
+            <span className="label">Your match bet</span>
+            <p className="title-lg amount">
+              {playerMatchTotal}
+              {isAllIn ? " · all in" : ""}
             </p>
           </div>
-
-          <div className="row">
-            <div>
-              <span className="label">Your match bet</span>
-              <p className="title-lg amount">
-                {playerMatchTotal}
-                {isAllIn ? " · all in" : ""}
-              </p>
-            </div>
-            <div className="spacer" />
-            <div>
-              <span className="label">This round</span>
-              <p className="title-lg amount">
-                {type === "raise"
-                  ? raiseTotal
-                  : type === "call"
-                    ? playerRoundTotal + callAmount
-                    : playerRoundTotal}
-              </p>
-            </div>
+          <div className="spacer" />
+          <div>
+            <span className="label">This round</span>
+            <p className="title-lg amount">
+              {type === "raise"
+                ? raiseTotal
+                : type === "call"
+                  ? playerRoundTotal + callAmount
+                  : playerRoundTotal}
+            </p>
           </div>
-
-          <div className="choice-grid">
-            {options.map((option) => (
-              <button
-                key={option.type}
-                type="button"
-                className="choice"
-                data-selected={type === option.type}
-                onClick={() => setType(option.type)}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-
-          {type === "raise" ? (
-            <>
-              <div className="row">
-                <Button
-                  size="sm"
-                  variant="tonal"
-                  onClick={() => setAmount(Math.min(minRaiseBy, remaining))}
-                >
-                  Min +{minRaiseBy}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="tonal"
-                  onClick={() => setAmount(Math.min(amount + minRaise, remaining))}
-                >
-                  +{minRaise}
-                </Button>
-                <Button size="sm" variant="tonal" onClick={() => setAmount(remaining)}>
-                  All in {remaining}
-                </Button>
-              </div>
-              <p className="muted">
-                Raise +{amount} → {raiseTotal} this round, {raiseMatchTotal} in the match
-              </p>
-              <NumberPad value={amount} onChange={setAmount} max={remaining} />
-            </>
-          ) : null}
-
-          {error ? <p className="negative">{error}</p> : null}
-
-          <div className="row">
-            <Button variant="ghost" block disabled={busy} onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              block
-              disabled={busy || (type === "raise" && !canRaise)}
-              onClick={confirm}
-            >
-              {mode === "edit" ? "Save change" : "Confirm"}
-            </Button>
-          </div>
-          {mode === "edit" && onDelete ? (
-            <Button variant="ghost" block disabled={busy} onClick={() => setConfirmingDelete(true)}>
-              Delete this action
-            </Button>
-          ) : null}
         </div>
-      </div>
+
+        <div className="choice-grid">
+          {options.map((option) => (
+            <button
+              key={option.type}
+              type="button"
+              className="choice"
+              data-selected={type === option.type}
+              onClick={() => setType(option.type)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        {type === "raise" ? (
+          <>
+            <div className="row">
+              <Button
+                size="sm"
+                variant="tonal"
+                onClick={() => setAmount(Math.min(minRaiseBy, remaining))}
+              >
+                Min +{minRaiseBy}
+              </Button>
+              <Button
+                size="sm"
+                variant="tonal"
+                onClick={() => setAmount(Math.min(amount + minRaise, remaining))}
+              >
+                +{minRaise}
+              </Button>
+              <Button size="sm" variant="tonal" onClick={() => setAmount(remaining)}>
+                All in {remaining}
+              </Button>
+            </div>
+            <p className="muted">
+              Raise +{amount} → {raiseTotal} this round, {raiseMatchTotal} in the match
+            </p>
+            <NumberPad value={amount} onChange={setAmount} max={remaining} />
+          </>
+        ) : null}
+
+        {error ? <p className="negative">{error}</p> : null}
+
+        <div className="row">
+          <Button variant="ghost" block disabled={busy} onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            block
+            disabled={busy || (type === "raise" && !canRaise)}
+            onClick={confirm}
+          >
+            {mode === "edit" ? "Save change" : "Confirm"}
+          </Button>
+        </div>
+        {mode === "edit" && onDelete ? (
+          <Button variant="ghost" block disabled={busy} onClick={() => setConfirmingDelete(true)}>
+            Delete this action
+          </Button>
+        ) : null}
+      </Sheet>
 
       {confirmingEdit ? (
         <ConfirmDialog

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { PlayerSnapshot, Session } from "../../domain";
 import { PlayerPicker } from "./PlayerPicker";
-import { Button } from "./ui";
+import { Button, Sheet } from "./ui";
 
 export function RosterSheet({
   session,
@@ -36,24 +36,21 @@ export function RosterSheet({
   };
 
   return (
-    <div className="sheet">
-      <div className="sheet__panel">
-        <h2 className="title-lg">Session players</h2>
-        <p className="muted">
-          Add or remove anyone from the config. This affects future matches; each match keeps its
-          own roster.
-        </p>
-        <PlayerPicker players={players} selected={selected} onToggle={toggle} />
-        {error ? <p className="negative">{error}</p> : null}
-        <div className="row">
-          <Button variant="ghost" block disabled={busy} onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="primary" block disabled={busy || selected.length === 0} onClick={save}>
-            {busy ? "Saving…" : "Save roster"}
-          </Button>
-        </div>
+    <Sheet title="Session players" onClose={onClose}>
+      <p className="muted">
+        Add or remove anyone from the config. This affects future matches; each match keeps its own
+        roster.
+      </p>
+      <PlayerPicker players={players} selected={selected} onToggle={toggle} />
+      {error ? <p className="negative">{error}</p> : null}
+      <div className="row">
+        <Button variant="ghost" block disabled={busy} onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="primary" block disabled={busy || selected.length === 0} onClick={save}>
+          {busy ? "Saving…" : "Save roster"}
+        </Button>
       </div>
-    </div>
+    </Sheet>
   );
 }

@@ -12,8 +12,18 @@ import { ActionSheet } from "../components/ActionSheet";
 import { RoundsHistory } from "../components/RoundsHistory";
 import { StartMatchSheet } from "../components/StartMatchSheet";
 import { WinnersSheet } from "../components/WinnersSheet";
-import { IconClose, IconHistory } from "../components/icons";
-import { Button, Card, Center, IconButton, Pill, Screen, StatRow, TopBar } from "../components/ui";
+import { IconHistory } from "../components/icons";
+import {
+  Button,
+  Card,
+  Center,
+  IconButton,
+  Pill,
+  Screen,
+  Sheet,
+  StatRow,
+  TopBar,
+} from "../components/ui";
 import { playerName } from "../format";
 import { useConfig } from "../state/config";
 import { useSession } from "../state/useSession";
@@ -408,25 +418,14 @@ export function MatchScreen() {
       ) : null}
 
       {sheet?.kind === "history" ? (
-        <div className="sheet">
-          <div className="sheet__panel">
-            <div className="row">
-              <h2 className="title-lg">Round history</h2>
-              <div className="spacer" />
-              <IconButton label="Close history" onClick={() => setSheet(null)}>
-                <IconClose />
-              </IconButton>
-            </div>
-            <div className="screen__body">
-              <RoundsHistory
-                derived={derived}
-                currency={currency}
-                nameOf={(id) => playerName(id, session, config)}
-                onEdit={(action) => openEdit(action)}
-              />
-            </div>
-          </div>
-        </div>
+        <Sheet title="Round history" onClose={() => setSheet(null)}>
+          <RoundsHistory
+            derived={derived}
+            currency={currency}
+            nameOf={(id) => playerName(id, session, config)}
+            onEdit={(action) => openEdit(action)}
+          />
+        </Sheet>
       ) : null}
     </>
   );
