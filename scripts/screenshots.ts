@@ -1,18 +1,21 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { existsSync } from "node:fs";
-import { mkdir, rm } from "node:fs/promises";
+import { existsSync, readFileSync } from "node:fs";
+import { mkdir, readdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { type Browser, type Page, chromium, devices } from "@playwright/test";
-import type { AppConfig, Session } from "../src/domain";
+import {
+  type AppConfig,
+  type Session,
+  applyCommand,
+  createSession as makeSession,
+} from "../src/domain";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const workDir = path.join(root, ".screenshots");
-const dataDir = path.join(workDir, "data");
-const locationFile = path.join(workDir, "location.yaml");
 const outputDir = path.join(root, "docs", "screenshots");
 const port = Number(process.env.SCREENSHOTS_PORT ?? 7407);
 const base = `http://127.0.0.1:${port}`;
+const NOW = "2026-10-08T18:00:00.000Z";
 
 const config: AppConfig = {
   players: [
@@ -26,31 +29,10 @@ const config: AppConfig = {
   currencyLabel: "chips",
 };
 
-async function request<T>(method: string, route: string, body?: unknown): Promise<T> {
-  const response = await fetch(`${base}${route}`, {
-    method,
-    headers: { "content-type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  if (!response.ok) {
-    throw new Error(`${method} ${route} failed: ${response.status} ${await response.text()}`);
-  }
-  return (await response.json()) as T;
-}
-
-async function waitForServer(server: ChildProcess): Promise<void> {
-  const deadline = Date.now() + 20_000;
-  while (Date.now() < deadline) {
-    if (server.exitCode !== null) throw new Error(`server exited early (code ${server.exitCode})`);
-    try {
-      const response = await fetch(`${base}/api/setup`);
-      if (response.ok) return;
-    } catch {
-      // not up yet
-    }
-    await new Promise((resolve) => setTimeout(resolve, 200));
-  }
-  throw new Error("server did not become ready in time");
+interface SeedData {
+  config: AppConfig;
+  sessions: Session[];
+  revision: number;
 }
 
 interface PlayAction {
@@ -59,46 +41,63 @@ interface PlayAction {
   amount?: number;
 }
 
-async function playMatch(
-  sessionId: string,
+let idCounter = 0;
+const deps = {
+  now: () => NOW,
+  newId: () => `seed-${++idCounter}`,
+  random: () => 0.42,
+};
+
+function roster(ids: string[]): { id: string; name: string }[] {
+  return ids.map((id) => ({
+    id,
+    name: config.players.find((player) => player.id === id)?.name ?? id,
+  }));
+}
+
+function play(
+  session: Session,
   participantIds: string[],
   actions: PlayAction[],
   winnerIds?: string[],
-): Promise<{ session: Session; matchId: string }> {
-  let session = await request<Session>("POST", `/api/sessions/${sessionId}/commands`, {
-    command: { type: "startMatch", participantIds },
-  });
-  const matchId = session.matches[session.matches.length - 1]?.id;
+): { session: Session; matchId: string } {
+  let next = applyCommand(session, config, { type: "startMatch", participantIds }, deps);
+  const matchId = next.matches[next.matches.length - 1]?.id;
   if (!matchId) throw new Error("startMatch did not create a match");
   for (const action of actions) {
-    session = await request<Session>("POST", `/api/sessions/${sessionId}/commands`, {
-      command: {
+    next = applyCommand(
+      next,
+      config,
+      {
         type: "recordAction",
         matchId,
         playerId: action.playerId,
         actionType: action.actionType,
         amount: action.amount ?? 0,
       },
-    });
+      deps,
+    );
   }
   if (winnerIds) {
-    session = await request<Session>("POST", `/api/sessions/${sessionId}/commands`, {
-      command: { type: "selectWinners", matchId, winnerIds },
-    });
+    next = applyCommand(next, config, { type: "selectWinners", matchId, winnerIds }, deps);
   }
-  return { session, matchId };
+  return { session: next, matchId };
 }
 
-async function seed(): Promise<{ fridayId: string; liveMatchId: string; doneMatchId: string }> {
-  await request("POST", "/api/setup", { dataDir });
-  await request("PUT", "/api/config", config);
-
-  const friday = await request<Session>("POST", "/api/sessions", {
-    name: "Friday poker",
-    playerIds: ["beny", "mani", "rasam", "ali"],
-  });
-  const done = await playMatch(
-    friday.id,
+function buildSeed(): {
+  data: SeedData;
+  fridayId: string;
+  liveMatchId: string;
+  doneMatchId: string;
+} {
+  const friday = makeSession(
+    deps.newId(),
+    "Friday poker",
+    roster(["beny", "mani", "rasam", "ali"]),
+    NOW,
+  );
+  const done = play(
+    friday,
     ["beny", "mani", "rasam"],
     [
       { playerId: "beny", actionType: "raise", amount: 10 },
@@ -113,8 +112,8 @@ async function seed(): Promise<{ fridayId: string; liveMatchId: string; doneMatc
     ],
     ["beny"],
   );
-  const live = await playMatch(
-    friday.id,
+  const live = play(
+    done.session,
     ["beny", "mani", "rasam", "ali"],
     [
       { playerId: "beny", actionType: "raise", amount: 10 },
@@ -131,12 +130,14 @@ async function seed(): Promise<{ fridayId: string; liveMatchId: string; doneMatc
     ],
   );
 
-  const sunday = await request<Session>("POST", "/api/sessions", {
-    name: "Sunday cash game",
-    playerIds: ["beny", "mani", "rasam", "ali"],
-  });
-  await playMatch(
-    sunday.id,
+  const sunday = makeSession(
+    deps.newId(),
+    "Sunday cash game",
+    roster(["beny", "mani", "rasam", "ali"]),
+    NOW,
+  );
+  const sundayDone = play(
+    sunday,
     ["beny", "mani", "rasam", "ali"],
     [
       { playerId: "beny", actionType: "raise", amount: 10 },
@@ -153,7 +154,67 @@ async function seed(): Promise<{ fridayId: string; liveMatchId: string; doneMatc
     ["ali"],
   );
 
-  return { fridayId: friday.id, liveMatchId: live.matchId, doneMatchId: done.matchId };
+  return {
+    data: { config, sessions: [live.session, sundayDone.session], revision: 12 },
+    fridayId: friday.id,
+    liveMatchId: live.matchId,
+    doneMatchId: done.matchId,
+  };
+}
+
+async function waitForServer(server: ChildProcess): Promise<void> {
+  const deadline = Date.now() + 20_000;
+  while (Date.now() < deadline) {
+    if (server.exitCode !== null) throw new Error(`server exited early (code ${server.exitCode})`);
+    try {
+      const response = await fetch(base);
+      if (response.ok) return;
+    } catch {
+      // not up yet
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  throw new Error("server did not become ready in time");
+}
+
+async function seedBrowser(page: Page, data: SeedData): Promise<void> {
+  await page.evaluate(async (payload) => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("poker.pot");
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains("config")) {
+          db.createObjectStore("config", { keyPath: "key" });
+        }
+        if (!db.objectStoreNames.contains("sessions")) {
+          const sessions = db.createObjectStore("sessions", { keyPath: "id" });
+          sessions.createIndex("updatedAt", "updatedAt");
+          sessions.createIndex("createdAt", "createdAt");
+        }
+        if (!db.objectStoreNames.contains("meta")) {
+          db.createObjectStore("meta", { keyPath: "key" });
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const tx = database.transaction(["config", "sessions", "meta"], "readwrite");
+      tx.objectStore("config").put({ key: "config", value: payload.config });
+      const sessions = tx.objectStore("sessions");
+      for (const session of payload.sessions) sessions.put(session);
+      const meta = tx.objectStore("meta");
+      meta.put({ key: "onboarded", value: true });
+      meta.put({ key: "revision", value: payload.revision });
+      meta.put({ key: "lastBackupRevision", value: payload.revision });
+      meta.put({ key: "lastBackupAt", value: "2026-10-08T17:30:00.000Z" });
+      tx.oncomplete = () => {
+        database.close();
+        resolve();
+      };
+      tx.onerror = () => reject(tx.error);
+    });
+  }, data);
 }
 
 async function shot(
@@ -180,7 +241,7 @@ const THEME_STRIP = [
   { name: "theme-oled", theme: "oled", colorScheme: "light", seed: "oled" },
 ] as const;
 
-async function captureThemeStrip(browser: Browser, route: string): Promise<void> {
+async function captureThemeStrip(browser: Browser, route: string, data: SeedData): Promise<void> {
   const phone = devices["Pixel 7"];
   for (const entry of THEME_STRIP) {
     const context = await browser.newContext({
@@ -200,6 +261,14 @@ async function captureThemeStrip(browser: Browser, route: string): Promise<void>
       }, seeded);
     }
     const page = await context.newPage();
+    await page.goto(base, { waitUntil: "domcontentloaded" });
+    await page
+      .getByText("Welcome to poker.pot", { exact: false })
+      .first()
+      .waitFor({ timeout: 15_000 });
+    await seedBrowser(page, data);
+    await page.goto(base, { waitUntil: "domcontentloaded" });
+    await page.reload({ waitUntil: "domcontentloaded" });
     await page.goto(`${base}${route}`, { waitUntil: "domcontentloaded" });
     await page.getByText("Choose winners", { exact: false }).first().waitFor({ timeout: 15_000 });
     const actual = await page.evaluate(() => document.documentElement.dataset.theme);
@@ -213,18 +282,25 @@ async function captureThemeStrip(browser: Browser, route: string): Promise<void>
   }
 }
 
+async function report(): Promise<void> {
+  const files = (await readdir(outputDir)).filter((file) => file.endsWith(".png")).sort();
+  for (const file of files) {
+    const buffer = readFileSync(path.join(outputDir, file));
+    console.log(`screenshot ${file}: ${buffer.readUInt32BE(16)}x${buffer.readUInt32BE(20)}`);
+  }
+}
+
 async function main(): Promise<void> {
   if (!existsSync(path.join(root, "dist", "index.html"))) {
     throw new Error("client build missing — run `bun run build` first");
   }
 
-  await rm(workDir, { recursive: true, force: true });
-  await mkdir(dataDir, { recursive: true });
   await mkdir(outputDir, { recursive: true });
+  await rm(path.join(outputDir, "setup.png"), { force: true });
 
   const server = spawn("bun", ["src/server/index.ts"], {
     cwd: root,
-    env: { ...process.env, PORT: String(port), POKER_LOCATION_FILE: locationFile },
+    env: { ...process.env, PORT: String(port) },
     stdio: ["ignore", "pipe", "pipe"],
   });
   server.stderr.on("data", (chunk: Buffer) => process.stderr.write(chunk));
@@ -233,6 +309,7 @@ async function main(): Promise<void> {
   try {
     await waitForServer(server);
 
+    const { data, fridayId, liveMatchId, doneMatchId } = buildSeed();
     const phone = devices["Pixel 7"];
     const context = await browser.newContext({
       userAgent: phone.userAgent,
@@ -249,30 +326,31 @@ async function main(): Promise<void> {
     });
     const page = await context.newPage();
 
-    await shot(page, "setup", "/setup", "private data folder", true);
+    await shot(page, "onboarding", "/", "Welcome to poker.pot", false);
 
-    const { fridayId, liveMatchId, doneMatchId } = await seed();
+    await seedBrowser(page, data);
 
     await shot(page, "sessions", "/", "Friday poker", true);
-    await shot(page, "session", `/sessions/${fridayId}`, "Standings", true);
+    await shot(page, "session", `/#/sessions/${fridayId}`, "Standings", true);
     await shot(
       page,
       "match",
-      `/sessions/${fridayId}/matches/${liveMatchId}`,
+      `/#/sessions/${fridayId}/matches/${liveMatchId}`,
       "Choose winners",
       false,
     );
-    await shot(page, "history", `/sessions/${fridayId}/matches/${doneMatchId}`, "Won by", true);
-    await shot(page, "settings", "/settings", "Minimum raise", true);
+    await shot(page, "history", `/#/sessions/${fridayId}/matches/${doneMatchId}`, "Won by", true);
+    await shot(page, "settings", "/#/settings", "Export backup", true);
 
     await context.close();
 
-    await captureThemeStrip(browser, `/sessions/${fridayId}/matches/${liveMatchId}`);
+    await captureThemeStrip(browser, `/#/sessions/${fridayId}/matches/${liveMatchId}`, data);
   } finally {
     await browser.close();
     server.kill("SIGTERM");
-    await rm(workDir, { recursive: true, force: true });
   }
+
+  await report();
 }
 
 main().catch((error) => {
