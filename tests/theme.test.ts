@@ -85,9 +85,10 @@ describe("token stylesheet", () => {
   it("emits a preview color for every accent swatch", () => {
     const css = generateTokensCss();
     for (const accent of ACCENTS) {
-      expect(css, accent).toContain(`[data-swatch="${accent}"]`);
-      expect(css, accent).toContain(DOCUMENTED_PRIMARIES[accent].light);
-      expect(css, accent).toContain(DOCUMENTED_PRIMARIES[accent].dark);
+      expect(css, accent).toContain(
+        `[data-accent="${accent}"] {\n  --swatch-light: ${DOCUMENTED_PRIMARIES[accent].light};`,
+      );
+      expect(css, accent).toContain(`--swatch-dark: ${DOCUMENTED_PRIMARIES[accent].dark};`);
     }
   });
 

@@ -375,7 +375,7 @@ function swatchSection(): string {
   const lines: string[] = [];
   for (const accent of ACCENTS) {
     lines.push(
-      `[data-swatch="${accent}"] {`,
+      `[data-accent="${accent}"] {`,
       `  --swatch-light: ${buildPalette("light", accent).primary};`,
       `  --swatch-dark: ${buildPalette("dark", accent).primary};`,
       "}",

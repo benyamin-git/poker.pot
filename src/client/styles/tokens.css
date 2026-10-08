@@ -607,27 +607,27 @@
   color-scheme: dark;
 }
 
-[data-swatch="blue"] {
+[data-accent="blue"] {
   --swatch-light: #35639c;
   --swatch-dark: #7daeec;
 }
-[data-swatch="teal"] {
+[data-accent="teal"] {
   --swatch-light: #127070;
   --swatch-dark: #69bbba;
 }
-[data-swatch="green"] {
+[data-accent="green"] {
   --swatch-light: #3c703f;
   --swatch-dark: #4bc957;
 }
-[data-swatch="orange"] {
+[data-accent="orange"] {
   --swatch-light: #924c2b;
   --swatch-dark: #e29572;
 }
-[data-swatch="rose"] {
+[data-accent="rose"] {
   --swatch-light: #94464e;
   --swatch-dark: #e58f95;
 }
-[data-swatch="violet"] {
+[data-accent="violet"] {
   --swatch-light: #7638c0;
   --swatch-dark: #b49ce1;
 }

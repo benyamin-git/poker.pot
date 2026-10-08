@@ -69,7 +69,7 @@
 }
 
 .btn--sm {
-  min-height: var(--control-h-compact);
+  min-height: var(--control-h);
   padding-inline: var(--space-3);
   font-size: var(--text-sm);
 }
@@ -526,7 +526,7 @@
   position: relative;
   display: grid;
   place-items: center;
-  min-height: var(--control-h-compact);
+  min-height: var(--control-h);
   border-radius: var(--radius-sm);
   color: var(--on-surface-variant);
   font-size: var(--text-sm);
