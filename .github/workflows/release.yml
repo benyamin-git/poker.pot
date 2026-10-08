@@ -86,7 +86,7 @@ jobs:
             KEY_PASSWORD=pokerpot-unreleased
           fi
           {
-            echo "storeFile=poker.pot-upload.jks"
+            echo "storeFile=../poker.pot-upload.jks"
             echo "keyAlias=${KEY_ALIAS}"
             echo "password=${KEY_PASSWORD}"
           } > src-tauri/gen/android/keystore.properties
