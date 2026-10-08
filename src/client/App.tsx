@@ -1,12 +1,15 @@
+import { useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { IconGear, IconList } from "./components/icons";
-import { BottomTabs } from "./components/ui";
+import { BottomTabs, Center, Screen } from "./components/ui";
 import { MatchScreen } from "./screens/MatchScreen";
+import { OnboardingScreen } from "./screens/OnboardingScreen";
 import { SessionScreen } from "./screens/SessionScreen";
 import { SessionsScreen } from "./screens/SessionsScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { ConfigProvider } from "./state/config";
+import { store } from "./storage";
 
 export function AppShell() {
   const location = useLocation();
@@ -34,11 +37,44 @@ export function AppShell() {
   );
 }
 
+function OnboardingGate() {
+  const [onboarded, setOnboarded] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    store
+      .isOnboarded()
+      .then((value) => {
+        if (active) setOnboarded(value);
+      })
+      .catch(() => {
+        if (active) setOnboarded(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (onboarded === null) {
+    return (
+      <Screen>
+        <Center>
+          <p className="muted">Loading…</p>
+        </Center>
+      </Screen>
+    );
+  }
+
+  if (!onboarded) return <OnboardingScreen onDone={() => setOnboarded(true)} />;
+
+  return <AppShell />;
+}
+
 export function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <AppShell />
+        <OnboardingGate />
       </BrowserRouter>
     </ErrorBoundary>
   );
