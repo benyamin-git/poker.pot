@@ -6,8 +6,41 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no"
     />
-    <meta name="theme-color" content="#000000" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#fffbfe" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      (() => {
+        const themes = ["light", "dark", "oled"];
+        const accents = ["blue", "teal", "green", "orange", "rose", "violet"];
+        const colors = { light: "#fffbfe", dark: "#1c1b1f", oled: "#000000" };
+        let theme = null;
+        let accent = null;
+        try {
+          theme = localStorage.getItem("poker.pot:theme");
+          accent = localStorage.getItem("poker.pot:accent");
+        } catch {
+          theme = null;
+          accent = null;
+        }
+        if (!themes.includes(theme)) {
+          theme =
+            typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+        }
+        if (!accents.includes(accent)) {
+          accent = "blue";
+        }
+        const root = document.documentElement;
+        root.dataset.theme = theme;
+        root.dataset.accent = accent;
+        root.style.colorScheme = theme === "light" ? "light" : "dark";
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+          meta.setAttribute("content", colors[theme]);
+        }
+      })();
+    </script>
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
