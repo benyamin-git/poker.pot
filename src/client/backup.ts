@@ -2,6 +2,7 @@ import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import type { AppConfig, Match, Session } from "../domain";
 import { isIos } from "./platform";
+import type { Store } from "./storage";
 
 export const BACKUP_APP = "poker.pot";
 export const BACKUP_SCHEMA_VERSION = 1;
@@ -286,4 +287,32 @@ export async function saveBackupFile(
 
 export async function readBackupFile(file: File): Promise<BackupBundle> {
   return parseBundle(await file.text());
+}
+
+export async function exportFromStore(
+  store: Store,
+  save: (bundle: BackupBundle) => Promise<"shared" | "downloaded" | "cancelled"> = saveBackupFile,
+): Promise<"shared" | "downloaded" | "cancelled"> {
+  const data = await store.exportData();
+  const bundle = buildBundle(data.config, data.sessions, new Date().toISOString());
+  const result = await save(bundle);
+  if (result !== "cancelled") await store.markBackedUp();
+  return result;
+}
+
+export async function importIntoStore(
+  store: Store,
+  bundle: BackupBundle,
+  mode: "replace" | "merge",
+  resolutions?: Map<string, "local" | "incoming">,
+): Promise<void> {
+  if (mode === "replace") {
+    await store.replaceAll(bundle.data.config, bundle.data.sessions);
+    return;
+  }
+  const local = await store.exportData();
+  const plan = planMerge(local, bundle.data);
+  const merged = applyResolutions(plan, resolutions ?? new Map());
+  await store.putConfig(merged.config);
+  await store.putSessions(merged.sessions);
 }
