@@ -1,6 +1,6 @@
 [package]
 name = "poker_pot"
-version = "0.1.0"
+version = "0.1.1"
 description = "Phone-friendly pot manager for poker games with friends."
 authors = ["benyamin-git"]
 license = ""

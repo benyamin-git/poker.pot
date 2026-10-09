@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-10-09
+
+### Fixed
+
+- Backup import no longer shows the native browser file control; importing is a styled tonal button with the picked filename shown underneath.
+
+### Changed
+
+- App icon redesigned: two chip stacks side by side (one larger), no pot mark; refreshed across PWA, desktop and the Android launcher.
+
 ## [0.1.0] - 2026-10-08
 
 ### Added
