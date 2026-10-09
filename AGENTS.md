@@ -38,6 +38,7 @@ bun run build      # vite build -> dist/
 bun start          # serve dist/ on 0.0.0.0:7403
 ./scripts/live.sh  # detached static server, builds dist/ if missing
 bun run screenshots    # docs images on a transient 127.0.0.1:7407 server
+bun run icons      # rasterize public/poker-chip-logo.svg -> public/icons/
 bun run theme      # regenerate src/client/styles/tokens.css
 bun run version:set <x.y.z>  # bump package.json + src-tauri Cargo versions
 bun run test
