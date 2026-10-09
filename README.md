@@ -4,9 +4,9 @@ A phone-viewport pot manager for poker games with friends. It keeps a betting
 ledger; it does not deal cards or rank hands, and the group picks the winners.
 
 One phone is passed around the table. Each player taps their own name and records
-fold / check / call / raise. Every action is written to disk as it happens, so a
-sudden exit or shutdown does not lose the current round. History is visible and
-editable, and standings recompute from it.
+fold / check / call / raise. Every action is written to on-device storage as it
+happens, so a sudden exit or shutdown does not lose the current round. History is
+visible and editable, and standings recompute from it.
 
 > **Not standard poker.** poker.pot runs a custom house ruleset with no blinds,
 > no fixed turn order, and no hand ranking. The full ruleset is in
@@ -20,7 +20,7 @@ editable, and standings recompute from it.
 
 | Session overview | Settings | First-run setup |
 | --- | --- | --- |
-| ![Session overview](docs/screenshots/session.png) | ![Settings](docs/screenshots/settings.png) | ![First-run setup](docs/screenshots/setup.png) |
+| ![Session overview](docs/screenshots/session.png) | ![Settings](docs/screenshots/settings.png) | ![Onboarding](docs/screenshots/onboarding.png) |
 
 | Light | Dark | OLED |
 | --- | --- | --- |
@@ -30,11 +30,24 @@ The base screenshots are captured in Dark; the theme strip shows the same live
 match in Light / Dark / OLED.
 
 Regenerate them with `bun run screenshots`. The script builds the app, starts a
-throwaway server on port 7407 with its own temporary data directory (it does not
-touch `location.yaml`), seeds a demo session, and captures the screens with
+throwaway server on `127.0.0.1:7407` (it does not touch any real data), seeds a
+demo session into the browser's on-device storage, and captures the screens with
 Playwright. Install the browser once with `bunx playwright install chromium`. If
 the Playwright CDN is blocked, prefix the install with
 `PLAYWRIGHT_DOWNLOAD_HOST=https://cdn.npmmirror.com/binaries/playwright`.
+
+The app icons come from `public/icon.svg`, converted with `bun run icons`.
+
+## Install
+
+All data lives on the device; there is no account and no server to configure.
+
+- **Android:** grab the APK from the latest
+  [release](https://github.com/benyamin-git/poker.pot/releases) and install it.
+  Every release tag triggers a build signed with the project keystore.
+- **iPhone / iPad:** open `https://benyamin-git.github.io/poker.pot/` in Safari,
+  tap Share, then **Add to Home Screen**. The app installs as a home-screen app
+  with its own icon and works offline.
 
 ## Quick start
 
@@ -45,15 +58,10 @@ bun install
 bun run dev
 ```
 
-`bun run dev` starts two processes: the Bun API on `0.0.0.0:7403` and the Vite
-dev server on `0.0.0.0:7404` (strict), which proxies `/api` to the API.
+`bun run dev` starts the Vite dev server on `0.0.0.0:7404`. Open
+`http://<computer-ip>:7404` on the phone.
 
-The app ships Light, Dark, and OLED themes with six accent colors (blue by
-default), switched in Settings → Appearance. The first run follows the system
-`prefers-color-scheme`, OLED is opt-in, and the choice is stored per device.
-
-To serve the built app and API from one process, for a phone on the same
-network:
+To serve the built app over the LAN from one process:
 
 ```bash
 bun run build
@@ -62,61 +70,67 @@ bun start
 ./scripts/live.sh
 ```
 
-`bun start` serves the client and API on `0.0.0.0:7403`. Open
-`http://<computer-ip>:7403` on the phone. The API port comes from `PORT`
-(default `7403`).
+`bun start` serves `dist/` on `0.0.0.0:7403`. Open
+`http://<computer-ip>:7403` on the phone. The port comes from `PORT` (default
+`7403`).
 
 `scripts/live.sh` starts the same server detached (`nohup`), building `dist/`
 first if needed. It logs to `/tmp/poker.pot-liveserver.log`, writes a pid to
 `/tmp/poker.pot-liveserver.pid`, and prints the stop command. Override the port
 with `LIVE_SERVER_PORT`.
 
+The app ships Light, Dark, and OLED themes with six accent colors (blue by
+default), switched in Settings → Appearance. The first run follows the system
+`prefers-color-scheme`, OLED is opt-in, and the choice is stored per device.
+
 Other scripts: `bun run test`, `bun run test:watch`, `bun run typecheck`,
-`bun run lint`, `bun run format`, `bun run theme`, `bun run screenshots`.
+`bun run lint`, `bun run format`, `bun run theme`, `bun run screenshots`,
+`bun run icons`, `bun run version:set`.
 
 `bun run theme` regenerates `src/client/styles/tokens.css` from the palette in
 the design reference; the file is committed and never hand-edited.
 
+`bun run version:set <x.y.z>` rewrites the version in `package.json` and
+`src-tauri/Cargo.toml` (plus the lockfile) before tagging a release.
+
 `bin/dev`, `bin/build` and `bin/run` are wrappers around the matching `bun`
 commands for shell aliasing.
 
-## Data and config
+## Data and backups
 
-Session data lives outside this repository, in a private folder you choose. The
-pointer to that folder is `location.yaml` in this repo, which is **gitignored**;
-a template ships as `location.example.yaml`. You can also set it through the
-first-run setup screen, or point the server elsewhere with the
-`POKER_LOCATION_FILE` environment variable (which selects the location file, not
-the data directory).
+Everything lives in the browser's IndexedDB on the installing device: players,
+limits, sessions, and history. There is no server-side store.
 
+Backups are a single YAML file. Export it from Settings → Data, then import it on
+another device:
+
+- **Replace** wipes local data and loads the backup.
+- **Merge** applies the backup into local data; conflicts are shown one at a
+  time and each is resolved per item.
+
+Export a backup before switching phones or clearing browser data. Browser
+storage can be evicted under disk pressure; the exported file is the durable
+copy. Keep it somewhere safe — importing the same file twice replaces or merges
+by your choice, it never duplicates.
+
+## Release and versioning
+
+Every push to `main` runs the test suite (`ci.yml`) and deploys the PWA
+(`pages.yml`) to `https://benyamin-git.github.io/poker.pot/`.
+
+To ship a version:
+
+```bash
+bun run version:set 0.2.0   # bump package.json, Cargo.toml, Cargo.lock
+git add . git commit -m "release: 0.2.0"
+git tag v0.2.0
+git push origin main --tags
 ```
-<dataDir>/
-  config.yaml          # players, minRaise, maxBet, optional currencyLabel
-  sessions/<id>.yaml   # one file per session, full history
-```
 
-Keep `<dataDir>` as its own private git repository to back it up. The files are
-human-readable YAML, so diffs are meaningful. Never put the data folder inside
-this repository.
-
-`config.yaml` holds the players and the two betting limits:
-
-```yaml
-players:
-  - id: 3f0c...          # stable id; history references this, never the name
-    name: Ali
-minRaise: 5             # a raise must beat the round's current bet by this much
-maxBet: 100             # cumulative per match; reaching it is all-in
-currencyLabel: chips    # optional
-```
-
-Full player ids are generated when players are added through the settings
-screen. Removing a player only affects future match pickers: past matches keep
-their own participant snapshot.
-
-Every mutation is validated, applied in memory, then written with a temp-file
-plus rename under a per-session lock. Unreadable session files are moved to
-`sessions/.quarantine/` instead of breaking the app.
+The tag push builds a signed Android APK with the release keystore (secrets:
+`ANDROID_KEY_BASE64`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`) and opens a
+draft release with the APK attached. Publish the draft when you have verified it
+on a device. `CHANGELOG.md` keeps a log of what changed per version.
 
 ## Betting rules
 
@@ -148,8 +162,13 @@ Chip counts are integers.
 - `domain-invariants` — seeded random valid play asserting the ledger stays
   zero-sum.
 - `config` — `validateConfig` and `resolvePlayers`.
-- `server` — setup, config and session REST routes over a temp data directory.
-- `client-format` and `ui` — client helpers plus SSR smoke renders.
+- `server-static` — static serving, index fallback and path traversal defense.
+- `storage` — Dexie store, meta and revision handling (fake-indexeddb).
+- `backup` and `backup-flow` — YAML bundle round-trips, replace/merge and
+  conflict resolution.
+- `onboarding`, `client-format` and `ui` — the first-run gate, client helpers
+  and smoke renders.
+- `icons` — generated icon set invariants.
 - `theme` and `theme-runtime` — token generator invariants (documented
   primaries, every accent × theme role set, contrast, committed CSS) and
   appearance persistence.
@@ -159,9 +178,12 @@ Chip counts are integers.
 
 ```
 src/domain/    pure ledger engine (sessions, matches, rounds, winners)
-src/server/    Bun HTTP API, atomic YAML storage, setup and config
-src/client/    React + Vite app
-src/shared/    API types shared by client and server
+src/server/    static file server for the built client
+src/client/    React + Vite app (on-device storage, backup, themes)
+src-tauri/     Tauri Android shell (signed APK builds)
+public/icons/  generated app icons
 tests/         Vitest suites
-scripts/       token generator (theme.ts) and Playwright screenshots
+scripts/       theme, icons and screenshot generators, version bump,
+               artifact collection
+dist/          build output, generated by bun run build
 ```

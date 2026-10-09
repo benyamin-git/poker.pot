@@ -1,8 +1,10 @@
 # poker.pot — Agent Notes
 
 Phone-viewport pot manager for poker games with friends. A Bun server
-(`src/server/index.ts`) serves the built React UI from `dist/` and the `/api/*`
-routes. Session data lives outside the repo; see `README.md` and `rules.md`.
+(`src/server/index.ts`) serves the built React UI from `dist/` for LAN
+previews. All data lives in the browser's IndexedDB on the installing
+device; backups are single YAML files exported from Settings. See `README.md`
+and `rules.md`.
 
 ## Ports and servers
 
@@ -11,8 +13,8 @@ Personal projects use allocated ports in the 7400–7499 range. The pins live in
 
 | Server | Port | Command |
 | --- | --- | --- |
-| Live (UI + API) | `0.0.0.0:7403` | `./scripts/live.sh` (background) or `bun start` |
-| Dev Vite | `0.0.0.0:7404` | `bun run dev` (proxies `/api` to `http://localhost:7403`) |
+| Live (static preview) | `0.0.0.0:7403` | `./scripts/live.sh` (background) or `bun start` |
+| Dev Vite | `0.0.0.0:7404` | `bun run dev` |
 | Screenshots (transient) | `127.0.0.1:7407` | `bun run screenshots` |
 
 `bun run screenshots` is a transient, local-only helper: it starts a throwaway
@@ -31,11 +33,13 @@ Stop it with `kill $(cat /tmp/poker.pot-liveserver.pid)`.
 ## Commands
 
 ```bash
-bun run dev        # API + Vite dev servers
+bun run dev        # Vite dev server
 bun run build      # vite build -> dist/
-bun start          # serve dist/ + API on 0.0.0.0:7403
-./scripts/live.sh  # detached live server, builds dist/ if missing
+bun start          # serve dist/ on 0.0.0.0:7403
+./scripts/live.sh  # detached static server, builds dist/ if missing
+bun run screenshots    # docs images on a transient 127.0.0.1:7407 server
 bun run theme      # regenerate src/client/styles/tokens.css
+bun run version:set <x.y.z>  # bump package.json + src-tauri Cargo versions
 bun run test
 bun run typecheck
 bun run lint
