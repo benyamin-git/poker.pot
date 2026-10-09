@@ -23,6 +23,11 @@
   cursor: not-allowed;
 }
 
+.btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 .btn--primary {
   background: var(--primary);
   color: var(--on-primary);
@@ -558,6 +563,20 @@
   border: none;
   padding: 0;
   min-inline-size: 0;
+}
+
+.file-import__btn {
+  cursor: pointer;
+}
+
+.file-import__btn:has(input:focus-visible) {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.file-import__name {
+  min-block-size: 1lh;
+  margin: 0;
 }
 
 .visually-hidden {

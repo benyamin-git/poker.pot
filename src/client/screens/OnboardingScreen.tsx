@@ -1,7 +1,8 @@
-import { type ChangeEvent, useState } from "react";
+import { useState } from "react";
 import type { AppConfig } from "../../domain";
 import { type BackupBundle, readBackupFile } from "../backup";
 import { PlayersEditor, RulesEditor } from "../components/ConfigEditors";
+import { FileImportButton } from "../components/FileImportButton";
 import { ImportBackupSheet } from "../components/ImportBackupSheet";
 import { Button, Card, Screen, TopBar } from "../components/ui";
 import { DEFAULT_CONFIG, store } from "../storage";
@@ -22,10 +23,7 @@ export function OnboardingScreen({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const pickImport = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
+  const pickImport = async (file: File) => {
     setError(null);
     setMessage(null);
     try {
@@ -68,16 +66,7 @@ export function OnboardingScreen({
             <Button variant="primary" block onClick={() => setStep("players")}>
               Start fresh
             </Button>
-            <label className="label" htmlFor="onboardImport">
-              Import a backup
-            </label>
-            <input
-              id="onboardImport"
-              className="text-input"
-              type="file"
-              accept=".yaml,.yml,application/yaml"
-              onChange={(event) => void pickImport(event)}
-            />
+            <FileImportButton label="Import a backup" onPick={(file) => void pickImport(file)} />
             {message ? <p className="positive">{message}</p> : null}
             {error ? <p className="negative">{error}</p> : null}
           </Card>

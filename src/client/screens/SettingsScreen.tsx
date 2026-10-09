@@ -1,8 +1,9 @@
-import { type ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { AppConfig } from "../../domain";
 import { type BackupBundle, exportFromStore, readBackupFile } from "../backup";
 import { PlayersEditor, RulesEditor } from "../components/ConfigEditors";
+import { FileImportButton } from "../components/FileImportButton";
 import { ImportBackupSheet } from "../components/ImportBackupSheet";
 import { IconCheck } from "../components/icons";
 import { Button, Card, Screen, TopBar } from "../components/ui";
@@ -144,10 +145,7 @@ export function SettingsScreen() {
     }
   };
 
-  const pickImport = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
+  const pickImport = async (file: File) => {
     setDataError(null);
     setDataMessage(null);
     try {
@@ -205,16 +203,7 @@ export function SettingsScreen() {
             <Button variant="tonal" block disabled={exporting} onClick={() => void exportBackup()}>
               {exporting ? "Preparing…" : "Export backup"}
             </Button>
-            <label className="label" htmlFor="importBackup">
-              Import backup
-            </label>
-            <input
-              id="importBackup"
-              className="text-input"
-              type="file"
-              accept=".yaml,.yml,application/yaml"
-              onChange={(event) => void pickImport(event)}
-            />
+            <FileImportButton label="Import backup" onPick={(file) => void pickImport(file)} />
             {dataMessage ? <p className="positive">{dataMessage}</p> : null}
             {dataError ? <p className="negative">{dataError}</p> : null}
           </div>
