@@ -10,7 +10,7 @@ function pngSize(file: string): { width: number; height: number } {
 
 describe("icons", () => {
   it("ships the source mark", () => {
-    expect(existsSync(path.join(process.cwd(), "public/icon.svg"))).toBe(true);
+    expect(existsSync(path.join(process.cwd(), "public/poker-chip-logo.svg"))).toBe(true);
   });
 
   it.each<[string, number]>([

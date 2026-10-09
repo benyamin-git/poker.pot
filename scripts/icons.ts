@@ -30,7 +30,7 @@ svg{display:block;width:${art}px;height:${art}px}
 
 async function main(): Promise<void> {
   const root = process.cwd();
-  const svg = await readFile(path.join(root, "public", "icon.svg"), "utf8");
+  const svg = await readFile(path.join(root, "public", "poker-chip-logo.svg"), "utf8");
   const outDir = path.join(root, "public", "icons");
   await mkdir(outDir, { recursive: true });
 

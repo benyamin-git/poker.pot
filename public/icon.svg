@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="poker.pot">
-  <rect width="512" height="512" fill="#1c1b1f" />
-  <rect x="96" y="212" width="176" height="72" rx="36" fill="#e6e1e5" />
-  <rect x="96" y="268" width="176" height="72" rx="36" fill="#7daeec" />
-  <rect x="96" y="324" width="176" height="72" rx="36" fill="#e6e1e5" />
-  <rect x="300" y="240" width="116" height="72" rx="36" fill="#938f99" />
-  <rect x="300" y="296" width="116" height="72" rx="36" fill="#e6e1e5" />
-</svg>

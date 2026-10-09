@@ -36,7 +36,8 @@ Playwright. Install the browser once with `bunx playwright install chromium`. If
 the Playwright CDN is blocked, prefix the install with
 `PLAYWRIGHT_DOWNLOAD_HOST=https://cdn.npmmirror.com/binaries/playwright`.
 
-The app icons come from `public/icon.svg`, converted with `bun run icons`.
+The app icons come from `public/poker-chip-logo.svg`, converted with
+`bun run icons`.
 
 ## Install
 
