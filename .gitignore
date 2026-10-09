@@ -16,3 +16,4 @@ release/
 *.jks
 
 .DS_Store
+.ai-state
