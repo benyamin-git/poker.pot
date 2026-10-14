@@ -5,7 +5,7 @@
 > blinds, no forced bets, no turn order, and a manual winner pick at the end.
 > If you want a more standard version (blinds, proper no-limit betting, hand
 > evaluation, etc.), you are very welcome to fork this project and build it.
-> The [LICENSE](LICENSE) is literally "do whatever you want".
+> This project is licensed under the [MIT](LICENSE).
 
 This app keeps a ledger, not a stack of physical chips. There are no cards and
 no hand ranking — the group watches the real table and uses poker.pot only to

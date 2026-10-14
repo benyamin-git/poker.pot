@@ -10,7 +10,7 @@ visible and editable, and standings recompute from it.
 
 > **Not standard poker.** poker.pot runs a custom house ruleset with no blinds,
 > no fixed turn order, and no hand ranking. The full ruleset is in
-> [rules.md](rules.md). The [LICENSE](LICENSE) is "do whatever you want".
+> [rules.md](rules.md). This project is licensed under the [MIT](LICENSE).
 
 ## Screenshots
 
