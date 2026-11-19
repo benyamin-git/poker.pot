@@ -1,4 +1,4 @@
-# Betting rules
+# Rules
 
 > **Heads up:** poker.pot does **not** implement standard poker betting rules.
 > It runs a custom, simplified house ruleset made up by me and my friends — no
@@ -11,11 +11,32 @@ This app keeps a ledger, not a stack of physical chips. There are no cards and
 no hand ranking — the group watches the real table and uses poker.pot only to
 record who put in what and who won.
 
+There are two ways to record a game: standard betting matches and simple
+final-result matches.
+
+## Simple mode
+
+Simple mode is for games where the group only needs the final ledger. Turn it
+on in **Settings → Rules**, or during first-run setup. New matches then skip the
+betting rounds:
+
+- Pick one or more winners.
+- Enter what each loser paid.
+- Enter what each winner received. The winners' total must equal the losers'
+  total.
+- Save the result. The app records the payments and updates the session
+  standings.
+- A finished simple result can be edited from the match screen; the same total
+  check applies.
+- Backups from the earlier single-winner simple shape are converted to the
+  per-winner shape on import.
+
 ## The setup
 
 - Every session starts with every player at **zero** chips. Balances are a
   running ledger and may go negative; nobody "buys in".
-- Two limits come from `config.yaml`:
+- For standard matches, two limits are set in **Settings → Rules** (or during
+  first-run setup):
   - **`minRaise`** — a raise must beat the current bet of the round by at
     least this much.
   - **`maxBet`** — cumulative chips a player may put in across the whole
@@ -23,6 +44,9 @@ record who put in what and who won.
 - There are no blinds and no ante. The only pressure to bet preflop is
   `minRaise`: you cannot check preflop, so the first player must either fold or
   open with a raise.
+
+The rest of this document describes standard betting matches. Simple mode
+skips the betting rounds and the two limits.
 
 ## The betting rounds
 
@@ -72,6 +96,9 @@ matched the round's highest bet.
 
 ## Choosing winners and paying out
 
+This section applies to standard matches; simple mode payouts are entered
+directly.
+
 - When betting is done, the group picks the winner(s) from the players who have
   **not folded**. Winners do not have to be all-in, and the app never decides
   this for you — watch the table, then tap.
@@ -85,11 +112,15 @@ matched the round's highest bet.
 ## Editing history
 
 Every recorded action can be edited or deleted, and whole rounds can be removed.
-The match is replayed from scratch after any change, so standings always
-recompute. If an edit makes a previously chosen winner illegal (for example, it
-folds them), the match reopens and the group picks winners again.
+In simple mode, the final result can be edited from the match screen. The match
+is replayed from scratch after any change, so standings always recompute. If an
+edit makes a previously chosen winner illegal (for example, it folds them), the
+match reopens and the group picks winners again.
 
 ## Quick comparison with standard poker
+
+The comparison covers standard betting matches; simple mode records the final
+payments directly.
 
 | This app | Standard poker |
 | --- | --- |
@@ -97,6 +128,6 @@ folds them), the match reopens and the group picks winners again.
 | First preflop action must raise or fold | Players can call/limp or check in the big blind |
 | No fixed turn order; you tap any player | Strict clockwise turn order |
 | No hand ranking; winners picked manually | Best hand wins the pot |
-| Fixed `minRaise` / `maxBet` from config | No-limit/pot-limit/fixed betting structures |
+| Fixed `minRaise` / `maxBet` from Rules settings | No-limit/pot-limit/fixed betting structures |
 | Folded players cannot win | Same |
-| Pot split equally among chosen winners | Side pots and split pots based on hands |
+| Standard matches split the pot equally; simple mode records the final payments | Side pots and split pots based on hands |

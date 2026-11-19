@@ -13,7 +13,7 @@ import {
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const outputDir = path.join(root, "docs", "screenshots");
-const port = Number(process.env.SCREENSHOTS_PORT ?? 7407);
+const port = Number(process.env.SCREENSHOTS_PORT ?? 7410);
 const base = `http://127.0.0.1:${port}`;
 const NOW = "2026-10-08T18:00:00.000Z";
 
