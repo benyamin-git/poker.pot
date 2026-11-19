@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-11-19
+
+### Added
+
+- Simple mode for new matches: record only what each loser paid and what each winner won, with no betting rounds.
+- Multiple winners in simple mode, with per-winner winnings that must add up to the losers' total.
+
+### Changed
+
+- Simple results from older backups are converted to the per-winner shape on import.
+
+### Fixed
+
+- Restored consistent spacing between cards on onboarding, settings, sessions and live match screens.
+- Removed the empty import-file caption that left dead space in onboarding and settings.
+
 ## [0.1.2] - 2026-10-09
 
 ### Changed
