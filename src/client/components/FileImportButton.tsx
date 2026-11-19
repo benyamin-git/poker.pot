@@ -28,9 +28,11 @@ export function FileImportButton({ label, onPick }: FileImportButtonProps) {
           onChange={pick}
         />
       </label>
-      <p className="muted file-import__name" aria-live="polite">
-        {fileName ? `${fileName} selected` : null}
-      </p>
+      {fileName ? (
+        <p className="muted file-import__name" aria-live="polite">
+          {fileName} selected
+        </p>
+      ) : null}
     </>
   );
 }

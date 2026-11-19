@@ -117,6 +117,20 @@ export function RulesEditor({
             onChange={(event) => update({ currencyLabel: event.target.value })}
           />
         </label>
+        <label className="row" htmlFor="simpleMode">
+          <span className="stat-row__name">Simple mode</span>
+          <div className="spacer" />
+          <input
+            id="simpleMode"
+            type="checkbox"
+            checked={value.simpleMode ?? false}
+            onChange={(event) => update({ simpleMode: event.target.checked })}
+          />
+        </label>
+        <p className="muted">
+          New matches record only what each loser paid and what each winner won, with no betting
+          rounds.
+        </p>
       </div>
     </Card>
   );

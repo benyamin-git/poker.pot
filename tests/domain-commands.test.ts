@@ -4,6 +4,7 @@ import {
   type Command,
   type Deps,
   DomainError,
+  type Match,
   type PlayerSnapshot,
   type Session,
   applyCommand,
@@ -270,6 +271,133 @@ describe("match guards and invalid actions", () => {
       () => run(s, { type: "selectWinners", matchId: lastMatch(s).id, winnerIds: [] }),
       "winners-empty",
     );
+  });
+});
+
+describe("simple match entry", () => {
+  const simpleConfig: AppConfig = { ...config, simpleMode: true };
+
+  function startSimple(session = freshSession(["a", "b", "c"])): Session {
+    return applyCommand(
+      session,
+      simpleConfig,
+      { type: "startMatch", participantIds: ["a", "b", "c"] },
+      deps(),
+    );
+  }
+
+  it("records a single winner's result and keeps the ledger zero-sum", () => {
+    let s = startSimple();
+    const match = lastMatch(s);
+    expect(match.mode).toBe("simple");
+
+    s = applyCommand(
+      s,
+      simpleConfig,
+      {
+        type: "recordSimpleResult",
+        matchId: match.id,
+        winnerIds: ["a"],
+        paid: { b: 30, c: 20 },
+        payouts: { a: 50 },
+      },
+      deps(),
+    );
+
+    const derived = deriveMatch(lastMatch(s), simpleConfig);
+    expect(derived.rounds).toEqual([]);
+    expect(derived.pot).toBe(50);
+    expect(derived.contributions).toEqual({ a: 0, b: 30, c: 20 });
+    expect(derived.payouts).toEqual({ a: 50, b: 0, c: 0 });
+    expect(sessionBalances(s, simpleConfig)).toEqual({ a: 50, b: -30, c: -20 });
+  });
+
+  it("splits the winnings between multiple winners", () => {
+    let s = startSimple();
+    const match = lastMatch(s);
+
+    s = applyCommand(
+      s,
+      simpleConfig,
+      {
+        type: "recordSimpleResult",
+        matchId: match.id,
+        winnerIds: ["a", "b"],
+        paid: { c: 40 },
+        payouts: { a: 30, b: 10 },
+      },
+      deps(),
+    );
+
+    expect(lastMatch(s).winners).toEqual(["a", "b"]);
+    const derived = deriveMatch(lastMatch(s), simpleConfig);
+    expect(derived.contributions).toEqual({ a: 0, b: 0, c: 40 });
+    expect(derived.payouts).toEqual({ a: 30, b: 10, c: 0 });
+    expect(sessionBalances(s, simpleConfig)).toEqual({ a: 30, b: 10, c: -40 });
+  });
+
+  it("reads a legacy single-winner gross payout", () => {
+    const match: Match = {
+      id: "legacy",
+      participants: players.slice(0, 3).map((player) => ({ ...player })),
+      rounds: [],
+      mode: "simple",
+      status: "done",
+      winners: ["a"],
+      simple: { paid: { b: 30, c: 20 }, payout: 80 },
+      createdAt: "2026-01-01T00:00:00.000Z",
+      endedAt: "2026-01-01T00:00:00.000Z",
+      endedBy: "winners",
+    };
+    const derived = deriveMatch(match, simpleConfig);
+    expect(derived.pot).toBe(80);
+    expect(derived.contributions).toEqual({ a: 30, b: 30, c: 20 });
+    expect(derived.payouts).toEqual({ a: 80, b: 0, c: 0 });
+  });
+
+  it("rejects winnings that do not match the losers' total", () => {
+    const s = startSimple();
+    expectCode(
+      () =>
+        applyCommand(
+          s,
+          simpleConfig,
+          {
+            type: "recordSimpleResult",
+            matchId: lastMatch(s).id,
+            winnerIds: ["a", "b"],
+            paid: { c: 40 },
+            payouts: { a: 20, b: 10 },
+          },
+          deps(),
+        ),
+      "invalid-amount",
+    );
+  });
+
+  it("rejects betting actions on a simple match", () => {
+    const s = startSimple();
+    expectCode(
+      () =>
+        applyCommand(
+          s,
+          simpleConfig,
+          {
+            type: "recordAction",
+            matchId: lastMatch(s).id,
+            playerId: "a",
+            actionType: "raise",
+            amount: 5,
+          },
+          deps(),
+        ),
+      "action-not-allowed",
+    );
+  });
+
+  it("leaves detailed matches untouched when the setting is off", () => {
+    const s = startMatch(freshSession(["a", "b"]), ["a", "b"]);
+    expect(lastMatch(s).mode).toBeUndefined();
   });
 });
 

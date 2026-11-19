@@ -9,6 +9,7 @@ import type {
   Match,
   PlayerId,
   PlayerSnapshot,
+  SimpleResult,
 } from "./types";
 
 function cloneMatch(match: Match): Match {
@@ -21,6 +22,13 @@ function cloneMatch(match: Match): Match {
       actions: round.actions.map((a) => ({ ...a })),
     })),
   };
+}
+
+/** Whole-chip split: a base share plus the leftover chips. */
+export function splitPot(total: number, count: number): { base: number; remainder: number } {
+  if (count <= 0) return { base: 0, remainder: 0 };
+  const base = Math.floor(total / count);
+  return { base, remainder: total - base * count };
 }
 
 /** A match reopened for play, with all end-state fields removed. */
@@ -37,6 +45,8 @@ function reopenedMatch(match: Match): Match {
 
 /** Replay every action and derive the full match state. Throws on invalid data. */
 export function deriveMatch(match: Match, config: AppConfig): DerivedMatch {
+  if (match.simple) return deriveSimpleMatch(match, match.simple);
+
   const participantIds = match.participants.map((p) => p.id);
   const participantSet = new Set(participantIds);
   const folded = new Set<PlayerId>();
@@ -166,8 +176,7 @@ export function deriveMatch(match: Match, config: AppConfig): DerivedMatch {
       }
     }
     const n = match.winners.length;
-    const base = Math.floor(pot / n);
-    const remainder = pot - base * n;
+    const { base, remainder } = splitPot(pot, n);
     for (const winner of match.winners) payouts[winner] = base;
     if (remainder > 0) {
       const rng = mulberry32(match.remainderSeed ?? 1);
@@ -188,6 +197,90 @@ export function deriveMatch(match: Match, config: AppConfig): DerivedMatch {
     active,
     payouts,
     remainderWinners,
+  };
+}
+
+/**
+ * A simple match has no rounds. New results store each winner's net winnings;
+ * the legacy shape stored one gross payout, where the excess over the losers'
+ * total was the winner's own stake.
+ */
+function deriveSimpleMatch(match: Match, result: SimpleResult): DerivedMatch {
+  const winners = [...new Set(match.winners)];
+  const participants = new Set(match.participants.map((p) => p.id));
+  if (winners.length === 0) {
+    throw new DomainError("winners-empty", "a simple match needs at least one winner");
+  }
+  for (const winner of winners) {
+    if (!participants.has(winner)) {
+      throw new DomainError("unknown-player", `winner not in match: ${winner}`);
+    }
+  }
+
+  const contributions: Record<PlayerId, number> = {};
+  const payouts: Record<PlayerId, number> = {};
+  for (const player of match.participants) {
+    contributions[player.id] = 0;
+    payouts[player.id] = 0;
+  }
+
+  let paidByLosers = 0;
+  let paidToWinners = 0;
+
+  if (result.payouts) {
+    for (const player of match.participants) {
+      const isWinner = winners.includes(player.id);
+      const amount = isWinner ? (result.payouts[player.id] ?? 0) : (result.paid[player.id] ?? 0);
+      if (!Number.isInteger(amount) || amount < 0) {
+        throw new DomainError(
+          "invalid-amount",
+          `invalid ${isWinner ? "payout" : "payment"} for ${player.id}`,
+        );
+      }
+      if (isWinner) {
+        payouts[player.id] = amount;
+        paidToWinners += amount;
+      } else {
+        contributions[player.id] = amount;
+        paidByLosers += amount;
+      }
+    }
+    if (paidToWinners !== paidByLosers) {
+      throw new DomainError("invalid-amount", "winnings must equal the losers' total");
+    }
+  } else {
+    if (winners.length !== 1) {
+      throw new DomainError("winners-empty", "a simple match needs exactly one winner");
+    }
+    const winner = winners[0] as PlayerId;
+    for (const player of match.participants) {
+      if (player.id === winner) continue;
+      const paid = result.paid[player.id] ?? 0;
+      if (!Number.isInteger(paid) || paid < 0) {
+        throw new DomainError("invalid-amount", `invalid payment for ${player.id}`);
+      }
+      contributions[player.id] = paid;
+      paidByLosers += paid;
+    }
+    const payout = result.payout;
+    if (payout === undefined || !Number.isInteger(payout) || payout <= 0 || payout < paidByLosers) {
+      throw new DomainError("invalid-amount", "the winner must be paid at least the losers' total");
+    }
+    contributions[winner] = payout - paidByLosers;
+    payouts[winner] = payout;
+    paidToWinners = payout;
+  }
+
+  return {
+    match,
+    rounds: [],
+    pot: paidToWinners,
+    contributions,
+    folded: [],
+    allIn: [],
+    active: [],
+    payouts,
+    remainderWinners: [],
   };
 }
 
@@ -263,7 +356,12 @@ export function finalizeMatch(match: Match, config: AppConfig, now: string): Mat
   }
 }
 
-export function createMatch(participants: PlayerSnapshot[], id: string, now: string): Match {
+export function createMatch(
+  participants: PlayerSnapshot[],
+  id: string,
+  now: string,
+  mode?: Match["mode"],
+): Match {
   return {
     id,
     participants: participants.map((p) => ({ ...p })),
@@ -271,6 +369,7 @@ export function createMatch(participants: PlayerSnapshot[], id: string, now: str
     status: "active",
     winners: [],
     createdAt: now,
+    ...(mode ? { mode } : {}),
   };
 }
 
@@ -286,6 +385,9 @@ export function recordAction(
   input: ActionInput,
   deps: Deps,
 ): Match {
+  if (match.mode === "simple") {
+    throw new DomainError("action-not-allowed", "simple matches record only the final result");
+  }
   const derived = deriveMatch(match, config);
   if (derived.match.status === "done") {
     throw new DomainError("match-not-active", "match is already finished");
@@ -375,6 +477,12 @@ export function selectWinners(
   winnerIds: PlayerId[],
   deps: Deps,
 ): Match {
+  if (match.mode === "simple") {
+    throw new DomainError(
+      "action-not-allowed",
+      "record the final result of a simple match instead",
+    );
+  }
   const derived = deriveMatch(match, config);
   const nonFolded = new Set(
     match.participants.filter((p) => !derived.folded.includes(p.id)).map((p) => p.id),
@@ -398,6 +506,68 @@ export function selectWinners(
     endedAt: deps.now(),
   };
   return finalizeMatch(done, config, deps.now());
+}
+
+export interface SimpleResultInput {
+  winnerIds: PlayerId[];
+  paid: Record<PlayerId, number>;
+  payouts: Record<PlayerId, number>;
+}
+
+/** Finish a simple match from the money that changed hands. */
+export function recordSimpleResult(match: Match, input: SimpleResultInput, deps: Deps): Match {
+  if (match.mode !== "simple") {
+    throw new DomainError("action-not-allowed", "this match records betting actions");
+  }
+  const winners = [...new Set(input.winnerIds)];
+  if (winners.length === 0) {
+    throw new DomainError("winners-empty", "choose at least one winner");
+  }
+  const participantIds = new Set(match.participants.map((p) => p.id));
+  for (const winner of winners) {
+    if (!participantIds.has(winner)) {
+      throw new DomainError("unknown-player", `winner not in match: ${winner}`);
+    }
+  }
+
+  const paid: Record<PlayerId, number> = {};
+  let totalPaid = 0;
+  for (const player of match.participants) {
+    if (winners.includes(player.id)) continue;
+    const amount = input.paid[player.id] ?? 0;
+    if (!Number.isInteger(amount) || amount < 0) {
+      throw new DomainError("invalid-amount", `invalid payment for ${player.id}`);
+    }
+    paid[player.id] = amount;
+    totalPaid += amount;
+  }
+
+  const payouts: Record<PlayerId, number> = {};
+  let totalPayout = 0;
+  for (const winner of winners) {
+    const amount = input.payouts[winner] ?? 0;
+    if (!Number.isInteger(amount) || amount < 0) {
+      throw new DomainError("invalid-amount", `invalid payout for ${winner}`);
+    }
+    payouts[winner] = amount;
+    totalPayout += amount;
+  }
+
+  if (totalPaid <= 0) {
+    throw new DomainError("invalid-amount", "the losers must have paid something");
+  }
+  if (totalPayout !== totalPaid) {
+    throw new DomainError("invalid-amount", "winnings must equal the losers' total");
+  }
+
+  return {
+    ...match,
+    status: "done",
+    winners,
+    simple: { paid, payouts },
+    endedBy: "winners",
+    endedAt: deps.now(),
+  };
 }
 
 export function sessionBalances(

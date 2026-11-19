@@ -7,6 +7,7 @@ import {
   deleteRound,
   editAction,
   recordAction,
+  recordSimpleResult,
   selectWinners,
 } from "./match";
 import type { AppConfig, PlayerId, PlayerSnapshot, Session } from "./types";
@@ -31,6 +32,13 @@ export type Command =
   | { type: "deleteRound"; matchId: string; roundIndex: number }
   | { type: "deleteMatch"; matchId: string }
   | { type: "selectWinners"; matchId: string; winnerIds: PlayerId[] }
+  | {
+      type: "recordSimpleResult";
+      matchId: string;
+      winnerIds: PlayerId[];
+      paid: Record<PlayerId, number>;
+      payouts: Record<PlayerId, number>;
+    }
   | { type: "setRoster"; playerIds: PlayerId[] }
   | { type: "renameSession"; name: string }
   | { type: "pauseSession" }
@@ -96,7 +104,14 @@ export function applyCommand(
         throw new DomainError("invalid-config", "a match needs at least two players");
       }
       const participants = resolvePlayers(config, unique);
-      next.matches.push(createMatch(participants, deps.newId(), deps.now()));
+      next.matches.push(
+        createMatch(
+          participants,
+          deps.newId(),
+          deps.now(),
+          config.simpleMode ? "simple" : undefined,
+        ),
+      );
       break;
     }
     case "recordAction": {
@@ -147,6 +162,12 @@ export function applyCommand(
       const match = findMatch(next, command.matchId);
       const index = next.matches.indexOf(match);
       next.matches[index] = selectWinners(match, config, command.winnerIds, deps);
+      break;
+    }
+    case "recordSimpleResult": {
+      const match = findMatch(next, command.matchId);
+      const index = next.matches.indexOf(match);
+      next.matches[index] = recordSimpleResult(match, command, deps);
       break;
     }
     case "setRoster": {

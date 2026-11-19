@@ -10,6 +10,8 @@ export interface AppConfig {
   minRaise: number;
   maxBet: number;
   currencyLabel?: string;
+  /** New matches record only the final result instead of betting actions. */
+  simpleMode?: boolean;
 }
 
 export interface PlayerSnapshot {
@@ -42,12 +44,25 @@ export interface Round {
 
 export type MatchEndReason = "winners" | "last-standing";
 
+/** Final ledger of a simple match: what each loser paid and what each winner won. */
+export interface SimpleResult {
+  paid: Record<PlayerId, number>;
+  /** Net winnings per winner. New results always use this shape. */
+  payouts?: Record<PlayerId, number>;
+  /** Legacy single-winner gross payout, still read from old backups. */
+  payout?: number;
+}
+
 export interface Match {
   id: string;
   participants: PlayerSnapshot[];
   rounds: Round[];
   status: "active" | "done";
   winners: PlayerId[];
+  /** Set when the match was started in simple mode. */
+  mode?: "simple";
+  /** Present once a simple match's final result has been recorded. */
+  simple?: SimpleResult;
   /**
    * Seed used to distribute the non-divisible remainder chips. Stored so the
    * assignment is stable across edits and reloads.

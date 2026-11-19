@@ -1,6 +1,6 @@
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import type { AppConfig, Match, Session } from "../domain";
+import { type AppConfig, type Match, type Session, type SimpleResult, splitPot } from "../domain";
 import { isIos } from "./platform";
 import type { Store } from "./storage";
 
@@ -58,6 +58,17 @@ const matchSchema = z.object({
   rounds: z.array(roundSchema),
   status: z.enum(["active", "done"]),
   winners: z.array(z.string().min(1)),
+  mode: z.literal("simple").optional(),
+  simple: z
+    .object({
+      paid: z.record(z.string().min(1), z.number().int().nonnegative()),
+      payout: z.number().int().nonnegative().optional(),
+      payouts: z.record(z.string().min(1), z.number().int().nonnegative()).optional(),
+    })
+    .refine((simple) => simple.payout !== undefined || simple.payouts !== undefined, {
+      message: "a simple result needs payout or payouts",
+    })
+    .optional(),
   remainderSeed: z.number().optional(),
   createdAt: z.string().min(1),
   endedAt: z.string().optional(),
@@ -80,6 +91,7 @@ const configSchema = z
     minRaise: z.number().int().positive(),
     maxBet: z.number().int().positive(),
     currencyLabel: z.string().optional(),
+    simpleMode: z.boolean().optional(),
   })
   .refine((config) => config.maxBet >= config.minRaise, {
     message: "maxBet must be greater than or equal to minRaise",
@@ -95,6 +107,20 @@ const bundleSchema = z.object({
 type RawBundle = z.infer<typeof bundleSchema>;
 type RawMatch = z.infer<typeof matchSchema>;
 type RawSession = z.infer<typeof sessionSchema>;
+
+function toSimpleResult(raw: NonNullable<RawMatch["simple"]>, winners: string[]): SimpleResult {
+  const paid = { ...raw.paid };
+  if (raw.payouts !== undefined) {
+    return { paid, payouts: { ...raw.payouts } };
+  }
+  const total = Object.values(paid).reduce((sum, amount) => sum + amount, 0);
+  const ids = [...new Set(winners)];
+  const { base, remainder } = splitPot(total, ids.length);
+  return {
+    paid,
+    payouts: Object.fromEntries(ids.map((id, index) => [id, base + (index < remainder ? 1 : 0)])),
+  };
+}
 
 function toMatch(raw: RawMatch): Match {
   return {
@@ -113,6 +139,8 @@ function toMatch(raw: RawMatch): Match {
     status: raw.status,
     winners: [...raw.winners],
     createdAt: raw.createdAt,
+    ...(raw.mode !== undefined ? { mode: raw.mode } : {}),
+    ...(raw.simple !== undefined ? { simple: toSimpleResult(raw.simple, raw.winners) } : {}),
     ...(raw.remainderSeed !== undefined ? { remainderSeed: raw.remainderSeed } : {}),
     ...(raw.endedAt !== undefined ? { endedAt: raw.endedAt } : {}),
     ...(raw.endedBy !== undefined ? { endedBy: raw.endedBy } : {}),
@@ -137,6 +165,7 @@ function toConfig(raw: RawBundle["data"]["config"]): AppConfig {
     minRaise: raw.minRaise,
     maxBet: raw.maxBet,
     ...(raw.currencyLabel !== undefined ? { currencyLabel: raw.currencyLabel } : {}),
+    ...(raw.simpleMode !== undefined ? { simpleMode: raw.simpleMode } : {}),
   };
 }
 

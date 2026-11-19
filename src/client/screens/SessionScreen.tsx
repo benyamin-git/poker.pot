@@ -108,7 +108,10 @@ export function SessionScreen() {
                     })
                     .join(" · ");
                 } else if (derived) {
-                  line = `In progress · pot ${pot}`;
+                  line =
+                    match.mode === "simple"
+                      ? "In progress · enter result"
+                      : `In progress · pot ${pot}`;
                 }
               } catch {
                 line = "Unreadable match";

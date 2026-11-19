@@ -4,12 +4,15 @@ import {
   type ActionType,
   type Command,
   type DerivedAction,
+  type Match,
   type PlayerSnapshot,
   currentRoundIndex,
   deriveMatch,
+  splitPot,
 } from "../../domain";
 import { ActionSheet } from "../components/ActionSheet";
 import { RoundsHistory } from "../components/RoundsHistory";
+import { SimpleResultEntry } from "../components/SimpleResultEntry";
 import { StartMatchSheet } from "../components/StartMatchSheet";
 import { WinnersSheet } from "../components/WinnersSheet";
 import { IconHistory } from "../components/icons";
@@ -32,6 +35,7 @@ type SheetState =
   | { kind: "start" }
   | { kind: "winners" }
   | { kind: "history" }
+  | { kind: "simple" }
   | { kind: "record"; player: PlayerSnapshot; roundIndex: number }
   | { kind: "edit"; player: PlayerSnapshot; action: DerivedAction; roundIndex: number }
   | null;
@@ -57,6 +61,15 @@ export function nextToAct<T extends { id: string }>(
 
 function roundLabel(index: number): string {
   return index === 0 ? "Preflop" : `Round ${index + 1}`;
+}
+
+function simplePayouts(match: Match): Record<string, number> {
+  if (!match.simple) return {};
+  if (match.simple.payouts) return match.simple.payouts;
+  const total = Object.values(match.simple.paid).reduce((sum, amount) => sum + amount, 0);
+  const winners = [...new Set(match.winners)];
+  const { base, remainder } = splitPot(total, winners.length);
+  return Object.fromEntries(winners.map((id, index) => [id, base + (index < remainder ? 1 : 0)]));
 }
 
 export function MatchScreen() {
@@ -137,6 +150,29 @@ export function MatchScreen() {
 
   const currency = config.currencyLabel;
   const done = match.status === "done";
+
+  if (match.mode === "simple" && !done) {
+    return (
+      <Screen>
+        <TopBar
+          title={`${match.participants.length}-player match`}
+          onBack={() => navigate(`/sessions/${session.id}`)}
+          action={<Pill status="active">simple</Pill>}
+        />
+        <div className="screen__body">
+          <p className="muted">Record only the final result. This match has no betting rounds.</p>
+          <SimpleResultEntry
+            participants={match.participants}
+            currency={currency}
+            onSubmit={async (value) => {
+              await sendCommand({ type: "recordSimpleResult", matchId: match.id, ...value });
+            }}
+          />
+        </div>
+      </Screen>
+    );
+  }
+
   const currentRound = derived.rounds.find((r) => r.index === roundIndex);
   const actedThisRound = new Set((currentRound?.actions ?? []).map((a) => a.playerId));
   const roundTotals = new Map<string, number>();
@@ -207,56 +243,89 @@ export function MatchScreen() {
 
   if (done) {
     return (
-      <Screen>
-        <TopBar
-          title={`${match.participants.length}-player match`}
-          onBack={() => navigate(`/sessions/${session.id}`)}
-          action={<Pill status="ended">finished</Pill>}
-        />
-        <div className="screen__body">
-          <Card>
-            <span className="label">Pot</span>
-            <p className="display amount">
-              {derived.pot}
-              {currency ? ` ${currency}` : ""}
-            </p>
-            <p className="muted">
-              Won by {match.winners.map((id) => playerName(id, session, config)).join(", ")}
-            </p>
-          </Card>
-          <Card>
-            <span className="label">Result</span>
-            <div className="stack">
-              {match.participants.map((player) => (
-                <StatRow
-                  key={player.id}
-                  name={player.name}
-                  value={
-                    (derived.payouts[player.id] ?? 0) - (derived.contributions[player.id] ?? 0)
-                  }
-                  currency={currency}
-                  signed
-                />
-              ))}
-            </div>
-          </Card>
-          <span className="label">Rounds</span>
-          <RoundsHistory
-            derived={derived}
-            currency={currency}
-            nameOf={(id) => playerName(id, session, config)}
-            onEdit={session.status === "ended" ? undefined : openEdit}
+      <>
+        <Screen>
+          <TopBar
+            title={`${match.participants.length}-player match`}
+            onBack={() => navigate(`/sessions/${session.id}`)}
+            action={<Pill status="ended">finished</Pill>}
           />
-        </div>
-        <Button
-          variant="primary"
-          size="lg"
-          block
-          onClick={() => navigate(`/sessions/${session.id}`)}
-        >
-          Back to session
-        </Button>
-      </Screen>
+          <div className="screen__body">
+            <Card>
+              <span className="label">{match.mode === "simple" ? "Winnings" : "Pot"}</span>
+              <p className="display amount">
+                {derived.pot}
+                {currency ? ` ${currency}` : ""}
+              </p>
+              <p className="muted">
+                Won by {match.winners.map((id) => playerName(id, session, config)).join(", ")}
+              </p>
+            </Card>
+            <Card>
+              <span className="label">Result</span>
+              <div className="stack">
+                {match.participants.map((player) => (
+                  <StatRow
+                    key={player.id}
+                    name={player.name}
+                    value={
+                      (derived.payouts[player.id] ?? 0) - (derived.contributions[player.id] ?? 0)
+                    }
+                    currency={currency}
+                    signed
+                  />
+                ))}
+              </div>
+            </Card>
+            {match.mode === "simple" ? (
+              <Button
+                variant="tonal"
+                block
+                disabled={session.status === "ended"}
+                onClick={() => setSheet({ kind: "simple" })}
+              >
+                Edit result
+              </Button>
+            ) : (
+              <>
+                <span className="label">Rounds</span>
+                <RoundsHistory
+                  derived={derived}
+                  currency={currency}
+                  nameOf={(id) => playerName(id, session, config)}
+                  onEdit={session.status === "ended" ? undefined : openEdit}
+                />
+              </>
+            )}
+          </div>
+          <Button
+            variant="primary"
+            size="lg"
+            block
+            onClick={() => navigate(`/sessions/${session.id}`)}
+          >
+            Back to session
+          </Button>
+        </Screen>
+
+        {sheet?.kind === "simple" && match.simple ? (
+          <Sheet title="Edit result" onClose={() => setSheet(null)}>
+            <SimpleResultEntry
+              participants={match.participants}
+              currency={currency}
+              initial={{
+                winnerIds: match.winners,
+                paid: match.simple.paid,
+                payouts: simplePayouts(match),
+              }}
+              onSubmit={async (value) => {
+                await sendCommand({ type: "recordSimpleResult", matchId: match.id, ...value });
+                setSheet(null);
+              }}
+            />
+          </Sheet>
+        ) : null}
+      </>
     );
   }
 

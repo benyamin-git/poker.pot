@@ -96,6 +96,68 @@ describe("backup bundles", () => {
     expect(parseBundle(bundleToYaml(bundle))).toEqual(bundle);
   });
 
+  it("round-trips a simple match result", () => {
+    const simple: Session = {
+      ...session("s3", "Simple night"),
+      matches: [
+        {
+          id: "m2",
+          participants: [
+            { id: "p1", name: "Ada" },
+            { id: "p2", name: "Grace" },
+          ],
+          rounds: [],
+          mode: "simple",
+          status: "done",
+          winners: ["p1"],
+          simple: { paid: { p2: 25 }, payouts: { p1: 25 } },
+          createdAt: "2026-10-08T10:01:00.000Z",
+          endedAt: "2026-10-08T10:02:00.000Z",
+          endedBy: "winners",
+        },
+      ],
+    };
+    const bundle = buildBundle(
+      { ...configA, simpleMode: true },
+      [simple],
+      "2026-10-08T10:00:00.000Z",
+    );
+    expect(parseBundle(bundleToYaml(bundle))).toEqual(bundle);
+  });
+
+  it("normalizes a legacy single-winner payout to net winnings", () => {
+    const simple: Session = {
+      ...session("s3", "Simple night"),
+      matches: [
+        {
+          id: "m2",
+          participants: [
+            { id: "p1", name: "Ada" },
+            { id: "p2", name: "Grace" },
+          ],
+          rounds: [],
+          mode: "simple",
+          status: "done",
+          winners: ["p1"],
+          simple: { paid: { p2: 25 }, payout: 40 },
+          createdAt: "2026-10-08T10:01:00.000Z",
+          endedAt: "2026-10-08T10:02:00.000Z",
+          endedBy: "winners",
+        },
+      ],
+    };
+    const bundle = buildBundle(
+      { ...configA, simpleMode: true },
+      [simple],
+      "2026-10-08T10:00:00.000Z",
+    );
+    const parsed = parseBundle(bundleToYaml(bundle));
+    expect(parsed.data.sessions[0]?.matches[0]?.simple).toEqual({
+      paid: { p2: 25 },
+      payouts: { p1: 25 },
+    });
+  });
+
   it("rejects invalid yaml", () => {
     expectBackupError(() => parseBundle("app: [unclosed"), "invalid-yaml");
   });
